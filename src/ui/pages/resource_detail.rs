@@ -55,10 +55,6 @@ fn draw_header(
             &app_state.current_region,
             Style::default().fg(Color::Yellow),
         ),
-        Span::raw("    "),
-        Span::styled("[S] Services", Style::default().fg(Color::Green)),
-        Span::raw(" "),
-        Span::styled("[?] Help", Style::default().fg(Color::Green)),
     ])];
 
     let header = Paragraph::new(header_text).block(get_default_block(""));

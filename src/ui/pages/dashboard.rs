@@ -53,7 +53,7 @@ pub fn draw_dashboard(f: &mut Frame, area: Rect, app_state: &AppState) {
 
 fn draw_header(f: &mut Frame, area: Rect, app_state: &AppState) {
     let header_text = vec![Line::from(vec![
-        Span::styled("AWS Cloud Manager", Style::default().fg(Color::Cyan)),
+        Span::styled("Nimbus CTL", Style::default().fg(Color::Cyan)),
         Span::raw("    "),
         Span::styled("Profile: ", Style::default().fg(Color::Gray)),
         Span::styled(
@@ -66,10 +66,6 @@ fn draw_header(f: &mut Frame, area: Rect, app_state: &AppState) {
             &app_state.current_region,
             Style::default().fg(Color::Yellow),
         ),
-        Span::raw("    "),
-        Span::styled("[S] Services", Style::default().fg(Color::Green)),
-        Span::raw(" "),
-        Span::styled("[?] Help", Style::default().fg(Color::Green)),
     ])];
 
     let header = Paragraph::new(header_text).block(get_default_block(""));

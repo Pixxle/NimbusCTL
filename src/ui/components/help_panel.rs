@@ -33,7 +33,7 @@ pub fn draw_help_panel(f: &mut Frame, area: Rect, app_state: &AppState) {
     // Header
     let header_text = vec![
         Line::from(vec![Span::styled(
-            "AWS Cloud Manager - Help",
+            "Nimbus CTL - Help",
             Style::default().fg(Color::Cyan),
         )]),
         Line::from(""),
@@ -49,6 +49,7 @@ pub fn draw_help_panel(f: &mut Frame, area: Rect, app_state: &AppState) {
         .into_iter()
         .map(|(key, desc)| {
             ListItem::new(Line::from(vec![
+                Span::raw("│ "),
                 Span::styled(format!("{:12}", key), Style::default().fg(Color::Green)),
                 Span::styled(desc, Style::default().fg(Color::White)),
             ]))
