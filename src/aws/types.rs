@@ -57,10 +57,16 @@ impl ServiceType {
                 "iam" => Ok(ServiceType::IAM),
                 "secretsmanager" => Ok(ServiceType::Secrets),
                 "eks" => Ok(ServiceType::EKS),
-                _ => Err(crate::utils::error::AppError::Parse(format!("Unknown service type in ARN: {}", arn))),
+                _ => Err(crate::utils::error::AppError::Parse(format!(
+                    "Unknown service type in ARN: {}",
+                    arn
+                ))),
             }
         } else {
-            Err(crate::utils::error::AppError::Parse(format!("Invalid ARN format: {}", arn)))
+            Err(crate::utils::error::AppError::Parse(format!(
+                "Invalid ARN format: {}",
+                arn
+            )))
         }
     }
 }

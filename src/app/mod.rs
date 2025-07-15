@@ -1,8 +1,8 @@
-pub mod state;
-pub mod events;
 pub mod config;
-pub mod startup;
+pub mod events;
 pub mod settings;
+pub mod startup;
+pub mod state;
 
 use crate::utils::error::Result;
 use crossterm::event::KeyEvent;

@@ -1,6 +1,6 @@
 use crate::app::state::{AppPage, AppState};
-use crate::ui::pages::{dashboard, resource_list, resource_detail, settings};
-use crate::ui::components::{status_bar, help_panel, quick_nav};
+use crate::ui::components::{help_panel, quick_nav, status_bar};
+use crate::ui::pages::{dashboard, resource_detail, resource_list, settings};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     Frame,
@@ -10,8 +10,8 @@ pub fn draw_ui(f: &mut Frame, app_state: &mut AppState) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Min(0),      // Main content
-            Constraint::Length(1),   // Status bar
+            Constraint::Min(0),    // Main content
+            Constraint::Length(1), // Status bar
         ])
         .split(f.area());
 
@@ -24,7 +24,13 @@ pub fn draw_ui(f: &mut Frame, app_state: &mut AppState) {
             resource_list::draw_resource_list(f, chunks[0], app_state, *service_type);
         }
         AppPage::ResourceDetail(service_type, resource_id) => {
-            resource_detail::draw_resource_detail(f, chunks[0], app_state, *service_type, resource_id);
+            resource_detail::draw_resource_detail(
+                f,
+                chunks[0],
+                app_state,
+                *service_type,
+                resource_id,
+            );
         }
         AppPage::Settings => {
             settings::draw_settings(f, chunks[0], app_state);

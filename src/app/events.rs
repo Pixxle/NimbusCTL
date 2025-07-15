@@ -19,7 +19,7 @@ impl EventHandler {
     pub fn new() -> Self {
         let (sender, receiver) = mpsc::channel(100);
         let _sender = sender.clone();
-        
+
         // Spawn event listener task
         tokio::spawn(async move {
             loop {
@@ -38,17 +38,14 @@ impl EventHandler {
                         _ => {}
                     }
                 }
-                
+
                 tokio::time::sleep(Duration::from_millis(16)).await;
             }
         });
-        
-        Self {
-            receiver,
-            _sender,
-        }
+
+        Self { receiver, _sender }
     }
-    
+
     pub async fn next(&mut self) -> Option<AppEvent> {
         self.receiver.recv().await
     }

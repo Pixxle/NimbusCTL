@@ -8,7 +8,7 @@ impl CredentialsValidator {
     pub fn new() -> Self {
         Self {}
     }
-    
+
     pub async fn validate_credentials(&self) -> Result<CredentialsInfo> {
         // For Phase 1, return mock credentials info
         Ok(CredentialsInfo {

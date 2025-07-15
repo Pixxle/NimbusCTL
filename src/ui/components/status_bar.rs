@@ -10,16 +10,21 @@ use ratatui::{
 
 pub fn draw_status_bar(f: &mut Frame, area: Rect, app_state: &AppState) {
     let keybindings = get_default_keybindings();
-    
+
     let status_text = if app_state.user_config.display.show_help_bar {
-        keybindings.into_iter().take(8).map(|(key, desc)| {
-            vec![
-                Span::styled(key, Style::default().fg(Color::Green)),
-                Span::raw(" "),
-                Span::styled(desc, Style::default().fg(Color::White)),
-                Span::raw(" │ "),
-            ]
-        }).flatten().collect::<Vec<_>>()
+        keybindings
+            .into_iter()
+            .take(8)
+            .map(|(key, desc)| {
+                vec![
+                    Span::styled(key, Style::default().fg(Color::Green)),
+                    Span::raw(" "),
+                    Span::styled(desc, Style::default().fg(Color::White)),
+                    Span::raw(" │ "),
+                ]
+            })
+            .flatten()
+            .collect::<Vec<_>>()
     } else {
         vec![
             Span::styled("Press ", Style::default().fg(Color::Gray)),

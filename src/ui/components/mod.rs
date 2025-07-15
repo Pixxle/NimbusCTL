@@ -1,8 +1,8 @@
-pub mod status_bar;
 pub mod help_panel;
+pub mod notification;
 pub mod profile_selector;
+pub mod quick_actions;
+pub mod quick_nav;
 pub mod region_selector;
 pub mod resource_card;
-pub mod quick_actions;
-pub mod notification;
-pub mod quick_nav;
+pub mod status_bar;

@@ -11,16 +11,16 @@ use ratatui::{
 pub fn draw_help_panel(f: &mut Frame, area: Rect, app_state: &AppState) {
     // Create a centered popup
     let popup_area = centered_rect(80, 70, area);
-    
+
     f.render_widget(Clear, popup_area);
-    
+
     let block = Block::default()
         .title("Help")
         .borders(Borders::ALL)
         .style(Style::default().bg(Color::Black));
-    
+
     f.render_widget(block, popup_area);
-    
+
     let inner_area = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -29,34 +29,37 @@ pub fn draw_help_panel(f: &mut Frame, area: Rect, app_state: &AppState) {
             Constraint::Length(3),
         ])
         .split(popup_area);
-    
+
     // Header
     let header_text = vec![
-        Line::from(vec![
-            Span::styled("AWS Cloud Manager - Help", Style::default().fg(Color::Cyan)),
-        ]),
+        Line::from(vec![Span::styled(
+            "AWS Cloud Manager - Help",
+            Style::default().fg(Color::Cyan),
+        )]),
         Line::from(""),
     ];
-    
-    let header = Paragraph::new(header_text)
-        .alignment(Alignment::Center);
-    
+
+    let header = Paragraph::new(header_text).alignment(Alignment::Center);
+
     f.render_widget(header, inner_area[0]);
-    
+
     // Keybindings
     let keybindings = get_default_keybindings();
-    let keybinding_items: Vec<ListItem> = keybindings.into_iter().map(|(key, desc)| {
-        ListItem::new(Line::from(vec![
-            Span::styled(format!("{:12}", key), Style::default().fg(Color::Green)),
-            Span::styled(desc, Style::default().fg(Color::White)),
-        ]))
-    }).collect();
-    
-    let keybinding_list = List::new(keybinding_items)
-        .block(Block::default().borders(Borders::NONE));
-    
+    let keybinding_items: Vec<ListItem> = keybindings
+        .into_iter()
+        .map(|(key, desc)| {
+            ListItem::new(Line::from(vec![
+                Span::styled(format!("{:12}", key), Style::default().fg(Color::Green)),
+                Span::styled(desc, Style::default().fg(Color::White)),
+            ]))
+        })
+        .collect();
+
+    let keybinding_list =
+        List::new(keybinding_items).block(Block::default().borders(Borders::NONE));
+
     f.render_widget(keybinding_list, inner_area[1]);
-    
+
     // Footer
     let footer_text = vec![
         Line::from(""),
@@ -68,10 +71,9 @@ pub fn draw_help_panel(f: &mut Frame, area: Rect, app_state: &AppState) {
             Span::styled(" to close", Style::default().fg(Color::Gray)),
         ]),
     ];
-    
-    let footer = Paragraph::new(footer_text)
-        .alignment(Alignment::Center);
-    
+
+    let footer = Paragraph::new(footer_text).alignment(Alignment::Center);
+
     f.render_widget(footer, inner_area[2]);
 }
 

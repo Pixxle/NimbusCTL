@@ -1,5 +1,5 @@
-use crate::aws::types::ServiceType;
 use crate::app::state::AppState;
+use crate::aws::types::ServiceType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -104,7 +104,7 @@ impl DashboardLayout {
             },
         }
     }
-    
+
     fn default_widgets() -> Vec<DashboardWidget> {
         vec![
             DashboardWidget {
@@ -116,7 +116,10 @@ impl DashboardLayout {
                 },
                 enabled: true,
                 position: Position { x: 0, y: 0 },
-                size: Size { width: 50, height: 40 },
+                size: Size {
+                    width: 50,
+                    height: 40,
+                },
             },
             DashboardWidget {
                 id: "recent".to_string(),
@@ -127,7 +130,10 @@ impl DashboardLayout {
                 },
                 enabled: true,
                 position: Position { x: 50, y: 0 },
-                size: Size { width: 50, height: 40 },
+                size: Size {
+                    width: 50,
+                    height: 40,
+                },
             },
             DashboardWidget {
                 id: "quick_actions".to_string(),
@@ -137,7 +143,10 @@ impl DashboardLayout {
                 },
                 enabled: true,
                 position: Position { x: 0, y: 40 },
-                size: Size { width: 50, height: 30 },
+                size: Size {
+                    width: 50,
+                    height: 30,
+                },
             },
             DashboardWidget {
                 id: "region_overview".to_string(),
@@ -147,7 +156,10 @@ impl DashboardLayout {
                 },
                 enabled: true,
                 position: Position { x: 50, y: 40 },
-                size: Size { width: 50, height: 30 },
+                size: Size {
+                    width: 50,
+                    height: 30,
+                },
             },
             DashboardWidget {
                 id: "service_status".to_string(),
@@ -163,11 +175,14 @@ impl DashboardLayout {
                 },
                 enabled: true,
                 position: Position { x: 0, y: 70 },
-                size: Size { width: 100, height: 30 },
+                size: Size {
+                    width: 100,
+                    height: 30,
+                },
             },
         ]
     }
-    
+
     fn default_quick_actions() -> Vec<QuickAction> {
         vec![
             QuickAction {
@@ -212,21 +227,21 @@ impl DashboardLayout {
             },
         ]
     }
-    
+
     pub fn get_widget_by_id(&self, id: &str) -> Option<&DashboardWidget> {
         self.widgets.iter().find(|w| w.id == id)
     }
-    
+
     pub fn get_selected_widget(&self) -> Option<&DashboardWidget> {
         self.selected_widget.and_then(|i| self.widgets.get(i))
     }
-    
+
     pub fn select_widget(&mut self, index: usize) {
         if index < self.widgets.len() {
             self.selected_widget = Some(index);
         }
     }
-    
+
     pub fn select_next_widget(&mut self) {
         let widget_count = self.widgets.len();
         if widget_count > 0 {
@@ -236,7 +251,7 @@ impl DashboardLayout {
             });
         }
     }
-    
+
     pub fn select_previous_widget(&mut self) {
         let widget_count = self.widgets.len();
         if widget_count > 0 {
@@ -246,7 +261,7 @@ impl DashboardLayout {
             });
         }
     }
-    
+
     pub fn get_quick_actions(&self) -> Vec<&QuickAction> {
         self.widgets
             .iter()
@@ -257,7 +272,7 @@ impl DashboardLayout {
             .flatten()
             .collect()
     }
-    
+
     pub fn execute_quick_action(&self, action_id: &str) -> Option<&QuickAction> {
         self.get_quick_actions()
             .into_iter()

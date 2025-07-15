@@ -4,34 +4,34 @@ use thiserror::Error;
 pub enum AppError {
     #[error("AWS SDK error: {0}")]
     AwsSdk(String),
-    
+
     #[error("AWS configuration error: {0}")]
     AwsConfig(String),
-    
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("Serialization error: {0}")]
     Serde(#[from] serde_json::Error),
-    
+
     #[error("Configuration error: {0}")]
     Config(String),
-    
+
     #[error("Profile error: {0}")]
     Profile(String),
-    
+
     #[error("Resource not found: {0}")]
     ResourceNotFound(String),
-    
+
     #[error("Authentication error: {0}")]
     Auth(String),
-    
+
     #[error("Network error: {0}")]
     Network(String),
-    
+
     #[error("Parsing error: {0}")]
     Parse(String),
-    
+
     #[error("General error: {0}")]
     General(String),
 }

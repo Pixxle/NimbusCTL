@@ -63,11 +63,11 @@ impl RegionManager {
             },
         ]
     }
-    
+
     pub fn get_region_by_name(name: &str) -> Option<AwsRegion> {
         Self::get_all_regions().into_iter().find(|r| r.name == name)
     }
-    
+
     pub fn is_valid_region(name: &str) -> bool {
         Self::get_all_regions().iter().any(|r| r.name == name)
     }

@@ -18,33 +18,33 @@ impl MultiRegionAwsClients {
             current_profile: profile.to_string(),
         })
     }
-    
+
     pub async fn switch_region(&mut self, region: &str) -> Result<()> {
         self.current_region = region.to_string();
         Ok(())
     }
-    
+
     pub async fn switch_profile(&mut self, profile: &str) -> Result<()> {
         self.current_profile = profile.to_string();
         Ok(())
     }
-    
+
     pub fn get_current_clients(&self) -> Option<RegionClients> {
         Some(RegionClients {
             region: self.current_region.clone(),
         })
     }
-    
+
     pub fn get_clients_for_region(&self, region: &str) -> Option<RegionClients> {
         Some(RegionClients {
             region: region.to_string(),
         })
     }
-    
+
     pub fn current_region(&self) -> &str {
         &self.current_region
     }
-    
+
     pub fn current_profile(&self) -> &str {
         &self.current_profile
     }

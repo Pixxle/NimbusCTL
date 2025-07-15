@@ -21,9 +21,7 @@ pub fn draw_resource_card(f: &mut Frame, area: Rect, resource: &Resource, select
     };
 
     let resource_content = vec![
-        Line::from(vec![
-            Span::styled(resource.name.as_str(), style),
-        ]),
+        Line::from(vec![Span::styled(resource.name.as_str(), style)]),
         Line::from(""),
         Line::from(vec![
             Span::styled("ID: ", Style::default().fg(Color::Gray)),
@@ -44,8 +42,7 @@ pub fn draw_resource_card(f: &mut Frame, area: Rect, resource: &Resource, select
         .border_style(border_style)
         .title(resource.name.as_str());
 
-    let paragraph = Paragraph::new(resource_content)
-        .block(block);
+    let paragraph = Paragraph::new(resource_content).block(block);
 
     f.render_widget(paragraph, area);
 }

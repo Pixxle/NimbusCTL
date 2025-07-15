@@ -9,7 +9,7 @@ pub fn format_duration(duration: &chrono::Duration) -> String {
     let days = duration.num_days();
     let hours = duration.num_hours() % 24;
     let minutes = duration.num_minutes() % 60;
-    
+
     if days > 0 {
         format!("{} days, {} hours", days, hours)
     } else if hours > 0 {
@@ -29,7 +29,10 @@ pub fn extract_resource_id(arn: &str) -> crate::utils::error::Result<String> {
             Ok(resource_part.to_string())
         }
     } else {
-        Err(crate::utils::error::AppError::Parse(format!("Invalid ARN format: {}", arn)))
+        Err(crate::utils::error::AppError::Parse(format!(
+            "Invalid ARN format: {}",
+            arn
+        )))
     }
 }
 
@@ -38,7 +41,10 @@ pub fn extract_region_from_arn(arn: &str) -> crate::utils::error::Result<String>
     if parts.len() >= 4 {
         Ok(parts[3].to_string())
     } else {
-        Err(crate::utils::error::AppError::Parse(format!("Invalid ARN format: {}", arn)))
+        Err(crate::utils::error::AppError::Parse(format!(
+            "Invalid ARN format: {}",
+            arn
+        )))
     }
 }
 

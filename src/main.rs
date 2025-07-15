@@ -4,19 +4,16 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
-};
+use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 use tokio::time::Duration;
 
 mod app;
-mod ui;
 mod aws;
 mod config;
-mod utils;
 mod dashboard;
+mod ui;
+mod utils;
 
 use app::App;
 use ui::ui::draw_ui;
