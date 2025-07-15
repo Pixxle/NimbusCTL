@@ -1,11 +1,13 @@
 use crate::app::state::AppState;
 use crate::aws::types::{ResourceId, ServiceType};
+use crate::ui::components::header;
+use crate::ui::layout::create_header_layout;
 use crate::ui::styles::get_default_block;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 
@@ -16,50 +18,15 @@ pub fn draw_resource_detail(
     service_type: ServiceType,
     resource_id: &ResourceId,
 ) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Header
-            Constraint::Min(0),    // Main content
-        ])
-        .split(area);
+    // Use centralized header layout function
+    let header_chunks = create_header_layout(area);
 
     // Draw header
-    draw_header(f, chunks[0], app_state, service_type, resource_id);
+    let page_title = format!("{} Resource Details", service_type.display_name());
+    header::draw_header(f, header_chunks[0], app_state, &page_title);
 
-    // Draw resource detail
-    draw_resource_detail_content(f, chunks[1], app_state, service_type, resource_id);
-}
-
-fn draw_header(
-    f: &mut Frame,
-    area: Rect,
-    app_state: &AppState,
-    service_type: ServiceType,
-    resource_id: &ResourceId,
-) {
-    let header_text = vec![Line::from(vec![
-        Span::styled(
-            format!("{} Resource Details", service_type.display_name()),
-            Style::default().fg(Color::Cyan),
-        ),
-        Span::raw("            "),
-        Span::styled("Profile: ", Style::default().fg(Color::Gray)),
-        Span::styled(
-            &app_state.current_profile,
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw("    "),
-        Span::styled("Region: ", Style::default().fg(Color::Gray)),
-        Span::styled(
-            &app_state.current_region,
-            Style::default().fg(Color::Yellow),
-        ),
-    ])];
-
-    let header = Paragraph::new(header_text).block(get_default_block(""));
-
-    f.render_widget(header, area);
+    // Draw resource detail content
+    draw_resource_detail_content(f, header_chunks[1], app_state, service_type, resource_id);
 }
 
 fn draw_resource_detail_content(

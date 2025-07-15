@@ -1,11 +1,13 @@
 use crate::app::state::AppState;
 use crate::aws::types::ServiceType;
+use crate::ui::components::header;
+use crate::ui::layout::{create_header_layout, create_resource_list_layout};
 use crate::ui::styles::get_default_block;
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::Rect,
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{List, ListItem, Paragraph},
     Frame,
 };
 
@@ -15,50 +17,19 @@ pub fn draw_resource_list(
     app_state: &AppState,
     service_type: ServiceType,
 ) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Header
-            Constraint::Min(0),    // Main content
-        ])
-        .split(area);
+    // Use centralized header layout function
+    let header_chunks = create_header_layout(area);
 
     // Draw header
-    draw_header(f, chunks[0], app_state, service_type);
+    let page_title = format!("{} Resources", service_type.display_name());
+    header::draw_header(f, header_chunks[0], app_state, &page_title);
 
-    // Draw resource list
-    let main_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
-        .split(chunks[1]);
+    // Use centralized resource list layout for main content
+    let resource_chunks = create_resource_list_layout(header_chunks[1]);
+    // resource_chunks: [list_area, detail_area] (60/40 split)
 
-    draw_resource_list_panel(f, main_chunks[0], app_state, service_type);
-    draw_resource_detail_panel(f, main_chunks[1], app_state, service_type);
-}
-
-fn draw_header(f: &mut Frame, area: Rect, app_state: &AppState, service_type: ServiceType) {
-    let header_text = vec![Line::from(vec![
-        Span::styled(
-            format!("{} Resources", service_type.display_name()),
-            Style::default().fg(Color::Cyan),
-        ),
-        Span::raw("               "),
-        Span::styled("Profile: ", Style::default().fg(Color::Gray)),
-        Span::styled(
-            &app_state.current_profile,
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw("    "),
-        Span::styled("Region: ", Style::default().fg(Color::Gray)),
-        Span::styled(
-            &app_state.current_region,
-            Style::default().fg(Color::Yellow),
-        ),
-    ])];
-
-    let header = Paragraph::new(header_text).block(get_default_block(""));
-
-    f.render_widget(header, area);
+    draw_resource_list_panel(f, resource_chunks[0], app_state, service_type);
+    draw_resource_detail_panel(f, resource_chunks[1], app_state, service_type);
 }
 
 fn draw_resource_list_panel(

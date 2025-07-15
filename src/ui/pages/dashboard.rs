@@ -1,67 +1,32 @@
 use crate::app::state::AppState;
+use crate::ui::components::header;
+use crate::ui::layout::{create_dashboard_layout, create_header_layout};
 use crate::ui::styles::get_default_block;
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::Rect,
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{List, ListItem, Paragraph},
+    widgets::{List, ListItem},
     Frame,
 };
 
 pub fn draw_dashboard(f: &mut Frame, area: Rect, app_state: &AppState) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Header
-            Constraint::Min(0),    // Main content
-        ])
-        .split(area);
+    // Use header layout to create header + content areas
+    let header_chunks = create_header_layout(area);
 
     // Draw header
-    draw_header(f, chunks[0], app_state);
+    header::draw_header(f, header_chunks[0], app_state, "Nimbus CTL");
 
-    // Draw main dashboard content
-    let main_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(chunks[1]);
+    // Use centralized dashboard layout function for main content
+    let layout_areas = create_dashboard_layout(header_chunks[1]);
+    // layout_areas: [top_left, top_right, bottom_left, bottom_right]
 
-    let left_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
-        .split(main_chunks[0]);
+    // Draw widgets using layout areas
+    draw_favorites_widget(f, layout_areas[0], app_state); // Top left
+    draw_recent_activity_widget(f, layout_areas[1], app_state); // Top right
 
-    let right_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
-        .split(main_chunks[1]);
-
-    // Draw widgets
-    draw_favorites_widget(f, left_chunks[0], app_state);
-
-    draw_recent_activity_widget(f, right_chunks[0], app_state);
-}
-
-fn draw_header(f: &mut Frame, area: Rect, app_state: &AppState) {
-    let header_text = vec![Line::from(vec![
-        Span::styled("Nimbus CTL", Style::default().fg(Color::Cyan)),
-        Span::raw("    "),
-        Span::styled("Profile: ", Style::default().fg(Color::Gray)),
-        Span::styled(
-            &app_state.current_profile,
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw("    "),
-        Span::styled("Region: ", Style::default().fg(Color::Gray)),
-        Span::styled(
-            &app_state.current_region,
-            Style::default().fg(Color::Yellow),
-        ),
-    ])];
-
-    let header = Paragraph::new(header_text).block(get_default_block(""));
-
-    f.render_widget(header, area);
+    // Note: bottom_left (layout_areas[2]) and bottom_right (layout_areas[3])
+    // are available for future dashboard widgets
 }
 
 fn draw_favorites_widget(f: &mut Frame, area: Rect, app_state: &AppState) {

@@ -1,74 +1,31 @@
 use crate::app::state::AppState;
+use crate::ui::components::header;
+use crate::ui::layout::{create_header_layout, create_settings_layout};
 use crate::ui::styles::get_default_block;
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::Rect,
     style::{Color, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::Paragraph,
     Frame,
 };
 
 pub fn draw_settings(f: &mut Frame, area: Rect, app_state: &AppState) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Header
-            Constraint::Min(0),    // Main content
-        ])
-        .split(area);
+    // Use centralized header layout function
+    let header_chunks = create_header_layout(area);
 
     // Draw header
-    draw_header(f, chunks[0], app_state);
+    header::draw_header(f, header_chunks[0], app_state, "Settings");
 
-    // Draw settings content
-    draw_settings_content(f, chunks[1], app_state);
-}
+    // Use centralized settings layout for main content
+    let settings_areas = create_settings_layout(header_chunks[1]);
+    // settings_areas: [top_left, bottom_left, top_right, bottom_right]
 
-fn draw_header(f: &mut Frame, area: Rect, app_state: &AppState) {
-    let header_text = vec![Line::from(vec![
-        Span::styled("Settings", Style::default().fg(Color::Cyan)),
-        Span::raw("                           "),
-        Span::styled("Profile: ", Style::default().fg(Color::Gray)),
-        Span::styled(
-            &app_state.current_profile,
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw("    "),
-        Span::styled("Region: ", Style::default().fg(Color::Gray)),
-        Span::styled(
-            &app_state.current_region,
-            Style::default().fg(Color::Yellow),
-        ),
-        Span::raw("    "),
-        Span::styled("[?] Help", Style::default().fg(Color::Green)),
-    ])];
-
-    let header = Paragraph::new(header_text).block(get_default_block(""));
-
-    f.render_widget(header, area);
-}
-
-fn draw_settings_content(f: &mut Frame, area: Rect, app_state: &AppState) {
-    let main_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(area);
-
-    let left_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(main_chunks[0]);
-
-    let right_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(main_chunks[1]);
-
-    // Draw settings sections
-    draw_aws_settings(f, left_chunks[0], app_state);
-    draw_display_settings(f, left_chunks[1], app_state);
-    draw_dashboard_settings(f, right_chunks[0], app_state);
-    draw_behavior_settings(f, right_chunks[1], app_state);
+    // Draw settings sections using layout areas
+    draw_aws_settings(f, settings_areas[0], app_state); // Top left
+    draw_display_settings(f, settings_areas[1], app_state); // Bottom left
+    draw_dashboard_settings(f, settings_areas[2], app_state); // Top right
+    draw_behavior_settings(f, settings_areas[3], app_state); // Bottom right
 }
 
 fn draw_aws_settings(f: &mut Frame, area: Rect, app_state: &AppState) {

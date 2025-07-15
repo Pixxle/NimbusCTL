@@ -1,44 +1,38 @@
 use crate::app::state::{AppPage, AppState};
 use crate::ui::components::{help_panel, quick_nav, status_bar};
+use crate::ui::layout::create_main_layout;
 use crate::ui::pages::{dashboard, resource_detail, resource_list, settings};
-use ratatui::{
-    layout::{Constraint, Direction, Layout},
-    Frame,
-};
+use ratatui::Frame;
 
 pub fn draw_ui(f: &mut Frame, app_state: &mut AppState) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Min(0),    // Main content
-            Constraint::Length(1), // Status bar
-        ])
-        .split(f.area());
+    // Use centralized main layout function
+    let main_chunks = create_main_layout(f.area());
+    // main_chunks: [main_content, status_bar]
 
     // Draw main content based on current page
     match &app_state.current_page {
         AppPage::Dashboard => {
-            dashboard::draw_dashboard(f, chunks[0], app_state);
+            dashboard::draw_dashboard(f, main_chunks[0], app_state);
         }
         AppPage::ResourceList(service_type) => {
-            resource_list::draw_resource_list(f, chunks[0], app_state, *service_type);
+            resource_list::draw_resource_list(f, main_chunks[0], app_state, *service_type);
         }
         AppPage::ResourceDetail(service_type, resource_id) => {
             resource_detail::draw_resource_detail(
                 f,
-                chunks[0],
+                main_chunks[0],
                 app_state,
                 *service_type,
                 resource_id,
             );
         }
         AppPage::Settings => {
-            settings::draw_settings(f, chunks[0], app_state);
+            settings::draw_settings(f, main_chunks[0], app_state);
         }
     }
 
     // Draw status bar
-    status_bar::draw_status_bar(f, chunks[1], app_state);
+    status_bar::draw_status_bar(f, main_chunks[1], app_state);
 
     // Draw help panel if visible
     if app_state.help_visible {
