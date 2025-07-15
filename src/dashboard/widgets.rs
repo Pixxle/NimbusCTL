@@ -135,96 +135,6 @@ impl DashboardLayout {
                     height: 40,
                 },
             },
-            DashboardWidget {
-                id: "quick_actions".to_string(),
-                title: "Quick Actions".to_string(),
-                widget_type: WidgetType::QuickActions {
-                    actions: Self::default_quick_actions(),
-                },
-                enabled: true,
-                position: Position { x: 0, y: 40 },
-                size: Size {
-                    width: 50,
-                    height: 30,
-                },
-            },
-            DashboardWidget {
-                id: "region_overview".to_string(),
-                title: "Region Overview".to_string(),
-                widget_type: WidgetType::RegionOverview {
-                    show_all_regions: false,
-                },
-                enabled: true,
-                position: Position { x: 50, y: 40 },
-                size: Size {
-                    width: 50,
-                    height: 30,
-                },
-            },
-            DashboardWidget {
-                id: "service_status".to_string(),
-                title: "Service Status".to_string(),
-                widget_type: WidgetType::ResourceCounts {
-                    services: vec![
-                        ServiceType::EC2,
-                        ServiceType::S3,
-                        ServiceType::RDS,
-                        ServiceType::IAM,
-                    ],
-                    show_percentages: false,
-                },
-                enabled: true,
-                position: Position { x: 0, y: 70 },
-                size: Size {
-                    width: 100,
-                    height: 30,
-                },
-            },
-        ]
-    }
-
-    fn default_quick_actions() -> Vec<QuickAction> {
-        vec![
-            QuickAction {
-                id: "launch_ec2".to_string(),
-                name: "Launch EC2 Instance".to_string(),
-                description: "Launch a new EC2 instance".to_string(),
-                service_type: ServiceType::EC2,
-                action_type: ActionType::Create,
-                hotkey: Some('1'),
-            },
-            QuickAction {
-                id: "create_s3_bucket".to_string(),
-                name: "Create S3 Bucket".to_string(),
-                description: "Create a new S3 bucket".to_string(),
-                service_type: ServiceType::S3,
-                action_type: ActionType::Create,
-                hotkey: Some('2'),
-            },
-            QuickAction {
-                id: "create_rds_instance".to_string(),
-                name: "Create RDS Database".to_string(),
-                description: "Create a new RDS database instance".to_string(),
-                service_type: ServiceType::RDS,
-                action_type: ActionType::Create,
-                hotkey: Some('3'),
-            },
-            QuickAction {
-                id: "create_iam_user".to_string(),
-                name: "Create IAM User".to_string(),
-                description: "Create a new IAM user".to_string(),
-                service_type: ServiceType::IAM,
-                action_type: ActionType::Create,
-                hotkey: Some('4'),
-            },
-            QuickAction {
-                id: "create_secret".to_string(),
-                name: "Create Secret".to_string(),
-                description: "Create a new secret".to_string(),
-                service_type: ServiceType::Secrets,
-                action_type: ActionType::Create,
-                hotkey: Some('5'),
-            },
         ]
     }
 
@@ -260,22 +170,5 @@ impl DashboardLayout {
                 None => widget_count - 1,
             });
         }
-    }
-
-    pub fn get_quick_actions(&self) -> Vec<&QuickAction> {
-        self.widgets
-            .iter()
-            .filter_map(|w| match &w.widget_type {
-                WidgetType::QuickActions { actions } => Some(actions.iter()),
-                _ => None,
-            })
-            .flatten()
-            .collect()
-    }
-
-    pub fn execute_quick_action(&self, action_id: &str) -> Option<&QuickAction> {
-        self.get_quick_actions()
-            .into_iter()
-            .find(|a| a.id == action_id)
     }
 }

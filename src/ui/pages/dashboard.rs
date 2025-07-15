@@ -38,17 +38,8 @@ pub fn draw_dashboard(f: &mut Frame, area: Rect, app_state: &AppState) {
 
     // Draw widgets
     draw_favorites_widget(f, left_chunks[0], app_state);
-    draw_quick_actions_widget(f, left_chunks[1], app_state);
+
     draw_recent_activity_widget(f, right_chunks[0], app_state);
-    draw_region_overview_widget(f, right_chunks[1], app_state);
-
-    // Draw service status at the bottom
-    let bottom_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(0), Constraint::Length(6)])
-        .split(chunks[1]);
-
-    draw_service_status_widget(f, bottom_chunks[1], app_state);
 }
 
 fn draw_header(f: &mut Frame, area: Rect, app_state: &AppState) {
@@ -138,72 +129,4 @@ fn draw_recent_activity_widget(f: &mut Frame, area: Rect, app_state: &AppState) 
     let list = List::new(items).block(get_default_block("Recent Activity"));
 
     f.render_widget(list, area);
-}
-
-fn draw_quick_actions_widget(f: &mut Frame, area: Rect, app_state: &AppState) {
-    let quick_actions = app_state.dashboard_layout.get_quick_actions();
-
-    let items: Vec<ListItem> = quick_actions
-        .into_iter()
-        .take(5)
-        .enumerate()
-        .map(|(i, action)| {
-            ListItem::new(Line::from(vec![
-                Span::styled(format!("[{}] ", i + 1), Style::default().fg(Color::Green)),
-                Span::styled(&action.name, Style::default().fg(Color::White)),
-            ]))
-        })
-        .collect();
-
-    let list = List::new(items).block(get_default_block("Quick Actions"));
-
-    f.render_widget(list, area);
-}
-
-fn draw_region_overview_widget(f: &mut Frame, area: Rect, app_state: &AppState) {
-    let region_info = vec![
-        Line::from(vec![
-            Span::styled(
-                &app_state.current_region,
-                Style::default().fg(Color::Yellow),
-            ),
-            Span::styled(": Active region", Style::default().fg(Color::Gray)),
-        ]),
-        Line::from(vec![
-            Span::styled("Available regions: ", Style::default().fg(Color::Gray)),
-            Span::styled(
-                app_state.available_regions.len().to_string(),
-                Style::default().fg(Color::White),
-            ),
-        ]),
-    ];
-
-    let paragraph = Paragraph::new(region_info).block(get_default_block("Region Overview"));
-
-    f.render_widget(paragraph, area);
-}
-
-fn draw_service_status_widget(f: &mut Frame, area: Rect, app_state: &AppState) {
-    let service_lines = vec![
-        Line::from(vec![
-            Span::styled("EC2: ", Style::default().fg(Color::Blue)),
-            Span::styled("Loading...", Style::default().fg(Color::Gray)),
-        ]),
-        Line::from(vec![
-            Span::styled("S3: ", Style::default().fg(Color::Blue)),
-            Span::styled("Loading...", Style::default().fg(Color::Gray)),
-        ]),
-        Line::from(vec![
-            Span::styled("RDS: ", Style::default().fg(Color::Blue)),
-            Span::styled("Loading...", Style::default().fg(Color::Gray)),
-        ]),
-        Line::from(vec![
-            Span::styled("IAM: ", Style::default().fg(Color::Blue)),
-            Span::styled("Loading...", Style::default().fg(Color::Gray)),
-        ]),
-    ];
-
-    let paragraph = Paragraph::new(service_lines).block(get_default_block("Service Status"));
-
-    f.render_widget(paragraph, area);
 }

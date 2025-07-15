@@ -200,20 +200,8 @@ impl AppState {
                 self.toggle_quick_nav();
                 Ok(())
             }
-            KeyCode::Char('h') | KeyCode::Char('H') => {
-                self.navigate_to_dashboard();
-                Ok(())
-            }
             KeyCode::Char('?') => {
                 self.help_visible = !self.help_visible;
-                Ok(())
-            }
-            KeyCode::F(2) => {
-                self.settings_visible = !self.settings_visible;
-                Ok(())
-            }
-            KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.region_selector_visible = !self.region_selector_visible;
                 Ok(())
             }
             KeyCode::Esc => {
@@ -221,10 +209,6 @@ impl AppState {
                 Ok(())
             }
             KeyCode::Enter => self.handle_enter().await,
-            KeyCode::Tab => {
-                self.handle_tab();
-                Ok(())
-            }
             KeyCode::Up => {
                 self.handle_up();
                 Ok(())
@@ -239,10 +223,6 @@ impl AppState {
             }
             KeyCode::Right => {
                 self.handle_right();
-                Ok(())
-            }
-            KeyCode::Char(c) if c.is_ascii_digit() => {
-                self.handle_number_key(c);
                 Ok(())
             }
             _ => Ok(()),
@@ -335,22 +315,6 @@ impl AppState {
 
     fn handle_right(&mut self) {
         // Handle right navigation based on current page
-    }
-
-    fn handle_number_key(&mut self, digit: char) {
-        if let Some(num) = digit.to_digit(10) {
-            let action_index = (num as usize).saturating_sub(1);
-
-            match &self.current_page {
-                AppPage::Dashboard => {
-                    // Execute quick action
-                    if action_index < self.dashboard_layout.get_quick_actions().len() {
-                        self.execute_quick_action(action_index);
-                    }
-                }
-                _ => {}
-            }
-        }
     }
 
     fn execute_quick_action(&mut self, _action_index: usize) {
