@@ -1,6 +1,6 @@
 use crate::app::state::AppState;
 use crate::ui::components::header;
-use crate::ui::layout::{create_dashboard_layout, create_header_layout};
+use crate::ui::layout::create_dashboard_layout;
 use crate::ui::styles::get_default_block;
 use ratatui::{
     layout::Rect,
@@ -11,22 +11,16 @@ use ratatui::{
 };
 
 pub fn draw_dashboard(f: &mut Frame, area: Rect, app_state: &AppState) {
-    // Use header layout to create header + content areas
-    let header_chunks = create_header_layout(area);
+    // Use centralized dashboard layout function that covers header to bottom
+    let layout_areas = create_dashboard_layout(area);
+    // layout_areas: [header, top_left, top_right, bottom_left, bottom_right]
 
     // Draw header
-    header::draw_header(f, header_chunks[0], app_state, "Nimbus CTL");
-
-    // Use centralized dashboard layout function for main content
-    let layout_areas = create_dashboard_layout(header_chunks[1]);
-    // layout_areas: [top_left, top_right, bottom_left, bottom_right]
+    header::draw_header(f, layout_areas[0], app_state, "Nimbus CTL");
 
     // Draw widgets using layout areas
-    draw_favorites_widget(f, layout_areas[0], app_state); // Top left
-    draw_recent_activity_widget(f, layout_areas[1], app_state); // Top right
-
-    // Note: bottom_left (layout_areas[2]) and bottom_right (layout_areas[3])
-    // are available for future dashboard widgets
+    draw_favorites_widget(f, layout_areas[1], app_state); // Top left
+    draw_recent_activity_widget(f, layout_areas[2], app_state); // Top right
 }
 
 fn draw_favorites_widget(f: &mut Frame, area: Rect, app_state: &AppState) {

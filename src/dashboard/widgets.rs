@@ -118,7 +118,7 @@ impl DashboardLayout {
                 position: Position { x: 0, y: 0 },
                 size: Size {
                     width: 50,
-                    height: 40,
+                    height: 100,
                 },
             },
             DashboardWidget {
@@ -132,7 +132,7 @@ impl DashboardLayout {
                 position: Position { x: 50, y: 0 },
                 size: Size {
                     width: 50,
-                    height: 40,
+                    height: 100,
                 },
             },
         ]
