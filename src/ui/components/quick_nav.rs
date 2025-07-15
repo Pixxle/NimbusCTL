@@ -23,15 +23,15 @@ pub fn draw_quick_nav(f: &mut Frame, app_state: &AppState) {
         .split(area);
 
     // Draw search input
-    draw_search_input(f, chunks[0], app_state);
+    draw_content_search_input(f, chunks[0], app_state);
 
     // Draw suggestions
-    draw_suggestions(f, chunks[1], app_state);
+    draw_content_suggestions(f, chunks[1], app_state);
 }
 
-fn draw_search_input(f: &mut Frame, area: Rect, app_state: &AppState) {
+fn draw_content_search_input(f: &mut Frame, area: Rect, app_state: &AppState) {
     let input_text = if app_state.quick_nav_input.is_empty() {
-        "Type to search services..."
+        "Type to search services or resource..."
     } else {
         &app_state.quick_nav_input
     };
@@ -60,7 +60,7 @@ fn draw_search_input(f: &mut Frame, area: Rect, app_state: &AppState) {
     f.render_widget(paragraph, area);
 }
 
-fn draw_suggestions(f: &mut Frame, area: Rect, app_state: &AppState) {
+fn draw_content_suggestions(f: &mut Frame, area: Rect, app_state: &AppState) {
     let suggestions = &app_state.quick_nav_suggestions;
     let selected_index = app_state.quick_nav_selected_index;
 

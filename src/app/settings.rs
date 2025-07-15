@@ -54,12 +54,6 @@ impl SettingsManager {
         Ok(())
     }
 
-    pub fn toggle_status_bar(&mut self) -> Result<()> {
-        self.config.display.show_status_bar = !self.config.display.show_status_bar;
-        self.save()?;
-        Ok(())
-    }
-
     pub fn toggle_unicode_symbols(&mut self) -> Result<()> {
         self.config.display.use_unicode_symbols = !self.config.display.use_unicode_symbols;
         self.save()?;

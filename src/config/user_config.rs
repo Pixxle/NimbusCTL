@@ -23,7 +23,6 @@ pub struct AwsConfig {
 pub struct DisplayConfig {
     pub theme: String,
     pub show_help_bar: bool,
-    pub show_status_bar: bool,
     pub use_unicode_symbols: bool,
     pub max_table_rows: usize,
 }
@@ -74,7 +73,6 @@ impl Default for DisplayConfig {
         Self {
             theme: "default".to_string(),
             show_help_bar: true,
-            show_status_bar: true,
             use_unicode_symbols: true,
             max_table_rows: 50,
         }

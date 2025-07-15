@@ -1,5 +1,5 @@
 use crate::app::state::{AppPage, AppState};
-use crate::ui::components::{help_panel, quick_nav, status_bar};
+use crate::ui::components::{help_panel, quick_nav};
 use crate::ui::layout::create_main_layout;
 use crate::ui::pages::{dashboard, resource_detail, resource_list, settings};
 use ratatui::Frame;
@@ -7,7 +7,6 @@ use ratatui::Frame;
 pub fn draw_ui(f: &mut Frame, app_state: &mut AppState) {
     // Use centralized main layout function
     let main_chunks = create_main_layout(f.area());
-    // main_chunks: [main_content, status_bar]
 
     // Draw main content based on current page
     match &app_state.current_page {
@@ -30,9 +29,6 @@ pub fn draw_ui(f: &mut Frame, app_state: &mut AppState) {
             settings::draw_settings(f, main_chunks[0], app_state);
         }
     }
-
-    // Draw status bar
-    status_bar::draw_status_bar(f, main_chunks[1], app_state);
 
     // Draw help panel if visible
     if app_state.help_visible {

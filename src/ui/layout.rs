@@ -5,7 +5,7 @@ pub fn create_main_layout(area: Rect) -> Vec<Rect> {
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Min(0),    // Main content
-            Constraint::Length(1), // Status bar
+            Constraint::Length(0), // Status bar
         ])
         .split(area)
         .to_vec()

@@ -62,7 +62,6 @@ async fn run_app<B: ratatui::backend::Backend>(
             let event = event::read()?;
             if let Event::Key(key) = event {
                 match key.code {
-                    KeyCode::Char('q') => return Ok(()),
                     KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         return Ok(());
                     }

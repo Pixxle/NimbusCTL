@@ -90,17 +90,6 @@ fn draw_display_settings(f: &mut Frame, area: Rect, app_state: &AppState) {
             ),
         ]),
         Line::from(vec![
-            Span::styled("Status Bar: ", Style::default().fg(Color::Gray)),
-            Span::styled(
-                if app_state.user_config.display.show_status_bar {
-                    "Yes"
-                } else {
-                    "No"
-                },
-                Style::default().fg(Color::White),
-            ),
-        ]),
-        Line::from(vec![
             Span::styled("Unicode: ", Style::default().fg(Color::Gray)),
             Span::styled(
                 if app_state.user_config.display.use_unicode_symbols {
