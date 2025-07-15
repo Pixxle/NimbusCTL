@@ -2,122 +2,80 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Commands
+## Project Overview
 
-### Build and Run
+NimbusCTL is a Terminal User Interface (TUI) application for managing AWS resources, built with Rust using the Ratatui framework. The project is currently in Phase 1 development with AWS SDK integration temporarily disabled.
 
-```bash
-cargo build          # Build the project
-cargo run             # Run the TUI application
-cargo check           # Check for compilation errors
-```
-
-### Development
+## Development Commands
 
 ```bash
-cargo test            # Run tests (when implemented)
-cargo clippy          # Run linter
-cargo fmt             # Format code
+# Build the project
+cargo build
+
+# Run the application
+cargo run
+
+# Run tests
+cargo test
+
+# Check for compilation errors
+cargo check
+
+# Run linter
+cargo clippy
+
+# Format code
+cargo fmt
 ```
 
-## Architecture Overview
+## Architecture
 
-This is a Terminal User Interface (TUI) application for managing AWS resources, built with Rust and Ratatui. The application follows a dashboard-centric design with a Command-P style quick navigation system.
+### Core Structure
 
-### Key Architectural Patterns
+- **App State Management**: Centralized state in `src/app/state.rs` using `AppState` struct
+- **Event Loop**: Async main loop handling keyboard input and UI updates in `src/main.rs`
+- **Page-based Navigation**: Four main pages (Dashboard, ResourceList, ResourceDetail, Settings)
+- **Multi-region AWS Support**: Architecture ready for AWS SDK integration in Phase 2
 
-**Event-Driven TUI Architecture**: The application uses a main event loop in `main.rs` that handles terminal events and delegates to the `App` struct which manages state through `AppState`.
+### Key Modules
 
-**Command-P Navigation**: Instead of traditional menu-based navigation, the application uses `Ctrl+P` to open a quick navigation overlay that allows users to search and jump directly to AWS services using fuzzy matching.
-
-**Multi-Region AWS Client Management**: The `MultiRegionAwsClients` struct manages AWS SDK clients across multiple regions, allowing seamless switching between regions while maintaining connection state.
-
-**Dashboard-Centric Design**: The default view is a dashboard with widgets showing favorites, recent activity, quick actions, and service overviews, rather than starting with a service list.
-
-**Phase-Based Implementation**: Currently in Phase 1 (basic infrastructure), with AWS SDK integration temporarily disabled for initial TUI development.
-
-### State Management
-
-The application state is centralized in `AppState` which manages:
-
-- Current page and navigation history
-- AWS profile and region selection
-- Quick navigation state (search input, suggestions, selection)
-- Dashboard layout and widgets
-- Favorites and recent activity
-- UI visibility states for overlays
+- `src/app/` - Application state, configuration, and event handling
+  - `state.rs` - Central AppState with navigation, AWS config, and UI state
+  - `events.rs` - Input event processing and routing
+- `src/aws/` - AWS service abstractions (Phase 2)
+  - `client.rs` - Multi-region client management (stubs for Phase 1)
+  - `services/` - Individual AWS service implementations
+  - `types.rs` - AWS resource type definitions and service enums
+- `src/ui/` - TUI components and rendering
+  - `pages/` - Main application pages (dashboard, resource views, settings)
+  - `components/` - Reusable UI components (header, selectors, notifications)
+- `src/config/` - User configuration management
+  - `user_config.rs` - TOML-based configuration with defaults
+- `src/dashboard/` - Dashboard widgets and user favorites
+- `src/utils/` - Error handling and helper utilities
 
 ### Navigation System
 
-**Page Flow**: Dashboard → ResourceList(ServiceType) → ResourceDetail(ServiceType, ResourceId) → Settings
+- **Quick Navigation**: Ctrl+P opens fuzzy search for AWS services
+- **Page History**: Back navigation with Escape key
+- **Service Types**: EC2, S3, RDS, IAM, Secrets Manager, EKS
 
-- No dedicated Services page - replaced with Command-P quick nav
-- Navigation uses `AppPage` enum with service-specific parameters
+### Configuration
 
-**Quick Navigation**:
+- Config file: `~/.config/nimbus-ctl/config.toml`
+- Auto-generated with sensible defaults on first run
+- Supports AWS profiles, regions, display preferences, and dashboard layout
 
-- `Ctrl+P` opens search overlay
-- Real-time fuzzy search across service names, descriptions, and keywords
-- Arrow keys navigate suggestions, Enter selects, Escape cancels
-- Implemented in `NavigationItem` and `NavigationAction` structs
+### Development Phase Notes
 
-### AWS Integration Architecture
+- **Phase 1**: UI foundation with mock AWS data (current)
+- **Phase 2**: AWS SDK integration (commented out in Cargo.toml)
+- AWS clients in `aws/client.rs` are currently stub implementations
 
-**Service Structure**: Each AWS service (EC2, S3, RDS, IAM, Secrets, EKS) has its own module in `src/aws/services/` with consistent interfaces for CRUD operations.
+### Key Controls
 
-**Profile Management**: AWS profiles are discovered from `~/.aws/credentials` and `~/.aws/config` using the `ProfileManager` struct.
-
-**Resource Tagging**: Built-in support for AWS resource tagging through `TaggingService` for organizing and searching resources.
-
-**Favorites System**: User-defined favorite resources persist across sessions using JSON storage in `FavoritesManager`.
-
-### UI Component Architecture
-
-**Modular Components**: UI components are split between:
-
-- `ui/pages/` - Full-page views (dashboard, resource_list, resource_detail, settings)
-- `ui/components/` - Reusable components (quick_nav, status_bar, help_panel, selectors)
-
-**Overlay System**: Modal overlays (quick nav, help, selectors) use `Clear` widget and centered positioning.
-
-**Responsive Layout**: Uses Ratatui's `Layout` with constraints to adapt to different terminal sizes.
-
-### Configuration Management
-
-**User Configuration**: Stored in TOML format with sections for AWS, display, behavior, and dashboard settings.
-
-**Default Values**: Sensible defaults defined in `config/defaults.rs` including keybindings and dashboard widget configurations.
-
-**Dashboard Customization**: Widget layout, enabled services, and display preferences are user-configurable.
-
-### Error Handling
-
-**Centralized Error Type**: Custom `AppError` enum in `utils/error.rs` handles all error scenarios with specific variants for AWS, IO, parsing, and general errors.
-
-**Async Error Propagation**: Uses `anyhow::Result` for async functions and custom `Result<T>` type alias for consistent error handling.
-
-### Development Notes
-
-**AWS SDK Status**: AWS SDK dependencies are currently commented out in `Cargo.toml` (Phase 1 implementation). Phase 2 will re-enable them for real AWS integration.
-
-**Mock Data**: Current implementation uses mock data for services and resources to enable UI development without AWS dependencies.
-
-**Keyboard-First Design**: All interactions are keyboard-driven with intuitive shortcuts. No mouse support by design.
-
-### Key Files
-
-- `src/app/state.rs` - Central application state management
-- `src/ui/components/quick_nav.rs` - Command-P navigation implementation
-- `src/aws/client.rs` - Multi-region AWS client management
-- `src/dashboard/favorites.rs` - Favorites persistence and management
-- `src/config/user_config.rs` - User configuration structure
-- `src/utils/error.rs` - Centralized error handling
-
-### Testing Strategy
-
-The application is designed for integration testing of the complete TUI workflow. Unit tests should focus on:
-
-- AWS service integration logic
-- Configuration loading/saving
-- Navigation state management
-- Search/filtering algorithms
+- `Ctrl+C`: Exit application
+- `Ctrl+P`: Toggle quick navigation
+- `?`: Toggle help panel
+- `Esc`: Back/close dialogs
+- Arrow keys: Navigation within lists and components
