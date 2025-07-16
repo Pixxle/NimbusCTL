@@ -11,7 +11,7 @@ pub fn draw_ui(f: &mut Frame, app_state: &mut AppState) {
     // Draw main content based on current page
     match &app_state.current_page {
         AppPage::Dashboard => {
-            dashboard::draw_dashboard(f, main_chunks[0], app_state);
+            dashboard::page::draw_dashboard(f, main_chunks[0], app_state);
         }
         AppPage::ResourceList(service_type) => {
             resource_list::draw_resource_list(f, main_chunks[0], app_state, *service_type);

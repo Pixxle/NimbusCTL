@@ -11,7 +11,6 @@ use tokio::time::Duration;
 mod app;
 mod aws;
 mod config;
-mod dashboard;
 mod ui;
 mod utils;
 
