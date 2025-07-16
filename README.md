@@ -1,4 +1,4 @@
-# NimbusCTL
+# WIP: NimbusCTL
 
 A Terminal User Interface (TUI) for managing AWS resources, built with Rust.
 
