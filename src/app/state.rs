@@ -220,7 +220,7 @@ impl AppState {
                 Ok(())
             }
             KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.toggle_command_palette();
+                self.toggle_quick_nav();
                 Ok(())
             }
             KeyCode::Char('P')
