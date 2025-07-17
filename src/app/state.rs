@@ -589,7 +589,6 @@ impl AppState {
     }
 
     fn populate_command_palette(&mut self) {
-        let registry = CommandRegistry::new();
         let context = CommandContext::new(
             self.current_page.clone(),
             self.selected_service,
@@ -599,7 +598,7 @@ impl AppState {
             self.current_profile.clone(),
             self.current_region.clone(),
         );
-        let commands = registry.get_commands_for_context(&context);
+        let commands = CommandRegistry::get_context_aware_commands(&context);
         self.command_palette.set_commands(commands);
     }
 

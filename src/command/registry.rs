@@ -18,11 +18,33 @@ impl CommandRegistry {
         // Add navigation commands
         commands.extend(Self::create_navigation_commands());
 
-        // Add profile commands
+        // Add profile commands (legacy static commands)
         commands.extend(Self::create_profile_commands());
 
-        // Add region commands
+        // Add region commands (legacy static commands)
         commands.extend(Self::create_region_commands());
+
+        // Add service commands
+        commands.extend(Self::create_service_commands());
+
+        // Add general commands
+        commands.extend(Self::create_general_commands());
+
+        Self { commands }
+    }
+
+    /// Create a new command registry with context-aware commands
+    pub fn new_with_context(context: &CommandContext) -> Self {
+        let mut commands = Vec::new();
+
+        // Add navigation commands
+        commands.extend(Self::create_navigation_commands());
+
+        // Add context-aware profile commands
+        commands.extend(Self::create_profile_commands_for_context(context));
+
+        // Add context-aware region commands
+        commands.extend(Self::create_region_commands_for_context(context));
 
         // Add service commands
         commands.extend(Self::create_service_commands());
@@ -39,6 +61,39 @@ impl CommandRegistry {
             .iter()
             .filter(|cmd| self.is_command_applicable(cmd, context))
             .cloned()
+            .collect()
+    }
+
+    /// Get context-aware commands directly (preferred method)
+    pub fn get_context_aware_commands(context: &CommandContext) -> Vec<Command> {
+        let mut commands = Vec::new();
+
+        // Add navigation commands
+        commands.extend(Self::create_navigation_commands());
+
+        // Add context-aware profile commands
+        commands.extend(Self::create_profile_commands_for_context(context));
+
+        // Add context-aware region commands
+        commands.extend(Self::create_region_commands_for_context(context));
+
+        // Add service commands
+        commands.extend(Self::create_service_commands());
+
+        // Add general commands
+        commands.extend(Self::create_general_commands());
+
+        // Filter commands based on context requirements
+        commands
+            .into_iter()
+            .filter(|cmd| {
+                // Check if command is enabled
+                if !cmd.enabled {
+                    return false;
+                }
+                // Check context requirements
+                context.satisfies_all_requirements(&cmd.context_requirements)
+            })
             .collect()
     }
 
@@ -111,7 +166,60 @@ impl CommandRegistry {
         commands
     }
 
-    /// Create profile switching commands
+    /// Create profile switching commands based on available profiles
+    pub fn create_profile_commands_for_context(context: &CommandContext) -> Vec<Command> {
+        let mut commands = Vec::new();
+
+        // Add generic profile selector toggle command
+        commands.push(
+            Command::new(
+                "profile.selector".to_string(),
+                "Show Profile Selector".to_string(),
+                "Open profile selector UI".to_string(),
+                CommandCategory::Profile,
+                CommandAction::ToggleUI(UIElement::ProfileSelector),
+                "👤".to_string(),
+            )
+            .with_keywords(vec![
+                "profile".to_string(),
+                "selector".to_string(),
+                "choose".to_string(),
+                "aws".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ProfilesAvailable]),
+        );
+
+        // Add specific profile switching commands for each available profile
+        for profile in &context.available_profiles {
+            // Skip current profile
+            if profile.name == context.current_profile {
+                continue;
+            }
+
+            commands.push(
+                Command::new(
+                    format!("profile.switch.{}", profile.name),
+                    format!("Switch to Profile: {}", profile.name),
+                    format!("Switch to AWS profile '{}'", profile.name),
+                    CommandCategory::Profile,
+                    CommandAction::SwitchProfile(profile.name.clone()),
+                    "👤".to_string(),
+                )
+                .with_keywords(vec![
+                    "profile".to_string(),
+                    "switch".to_string(),
+                    profile.name.clone(),
+                    "aws".to_string(),
+                    "account".to_string(),
+                ])
+                .with_context_requirements(vec![ContextRequirement::ProfilesAvailable]),
+            );
+        }
+
+        commands
+    }
+
+    /// Create profile switching commands (legacy method for backward compatibility)
     fn create_profile_commands() -> Vec<Command> {
         vec![Command::new(
             "profile.switch".to_string(),
@@ -130,7 +238,64 @@ impl CommandRegistry {
         .with_context_requirements(vec![ContextRequirement::ProfilesAvailable])]
     }
 
-    /// Create region switching commands
+    /// Create region switching commands based on available regions
+    pub fn create_region_commands_for_context(context: &CommandContext) -> Vec<Command> {
+        let mut commands = Vec::new();
+
+        // Add generic region selector toggle command
+        commands.push(
+            Command::new(
+                "region.selector".to_string(),
+                "Show Region Selector".to_string(),
+                "Open region selector UI".to_string(),
+                CommandCategory::Region,
+                CommandAction::ToggleUI(UIElement::RegionSelector),
+                "🌍".to_string(),
+            )
+            .with_keywords(vec![
+                "region".to_string(),
+                "selector".to_string(),
+                "choose".to_string(),
+                "aws".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::RegionsAvailable]),
+        );
+
+        // Add specific region switching commands for each available region
+        for region in &context.available_regions {
+            // Skip current region
+            if region.name == context.current_region {
+                continue;
+            }
+
+            commands.push(
+                Command::new(
+                    format!("region.switch.{}", region.name),
+                    format!("Switch to Region: {}", region.display_name),
+                    format!(
+                        "Switch to AWS region '{}' ({})",
+                        region.display_name, region.name
+                    ),
+                    CommandCategory::Region,
+                    CommandAction::SwitchRegion(region.name.clone()),
+                    "🌍".to_string(),
+                )
+                .with_keywords(vec![
+                    "region".to_string(),
+                    "switch".to_string(),
+                    region.name.clone(),
+                    region.display_name.clone(),
+                    "aws".to_string(),
+                    "location".to_string(),
+                ])
+                .with_context_requirements(vec![ContextRequirement::RegionsAvailable]),
+            );
+        }
+
+        commands
+    }
+
+    /// Create region switching commands (legacy method for backward compatibility)
     fn create_region_commands() -> Vec<Command> {
         vec![Command::new(
             "region.switch".to_string(),
