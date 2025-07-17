@@ -220,7 +220,7 @@ impl AppState {
                 Ok(())
             }
             KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.toggle_quick_nav();
+                self.toggle_command_palette();
                 Ok(())
             }
             KeyCode::Char('P')
@@ -289,6 +289,23 @@ impl AppState {
             self.region_selector_visible = false;
         } else if let Some(prev_page) = self.page_history.pop() {
             self.current_page = prev_page;
+            // Update selected service and resource based on new page
+            match &self.current_page {
+                AppPage::ResourceList(service_type) => {
+                    self.selected_service = Some(*service_type);
+                    self.selected_resource = None; // Clear resource selection when going back to list
+                }
+                AppPage::ResourceDetail(service_type, resource_id) => {
+                    self.selected_service = Some(*service_type);
+                    self.selected_resource = Some(resource_id.clone());
+                }
+                AppPage::Dashboard | AppPage::Settings => {
+                    self.selected_service = None;
+                    self.selected_resource = None;
+                }
+            }
+            // Update command context when navigating back
+            self.update_command_context();
         }
     }
 
@@ -298,7 +315,10 @@ impl AppState {
                 // Navigate to resource detail
                 let resource_id = format!("resource-{}", self.selected_resource_index);
                 self.page_history.push(self.current_page.clone());
-                self.current_page = AppPage::ResourceDetail(*service_type, resource_id);
+                self.current_page = AppPage::ResourceDetail(*service_type, resource_id.clone());
+                self.selected_resource = Some(resource_id);
+                // Update command context when navigating to resource detail
+                self.update_command_context();
             }
             _ => {}
         }
@@ -325,6 +345,8 @@ impl AppState {
             AppPage::ResourceList(_) => {
                 if self.selected_resource_index > 0 {
                     self.selected_resource_index -= 1;
+                    // Update command context when resource selection changes
+                    self.update_command_context();
                 }
             }
             _ => {}
@@ -336,6 +358,8 @@ impl AppState {
             AppPage::ResourceList(_) => {
                 // This would be bounded by actual resource count
                 self.selected_resource_index += 1;
+                // Update command context when resource selection changes
+                self.update_command_context();
             }
             _ => {}
         }
@@ -395,6 +419,9 @@ impl AppState {
                     );
                 }
             }
+
+            // Update command context after profile change
+            self.update_command_context();
         }
         Ok(())
     }
@@ -418,6 +445,9 @@ impl AppState {
                 format!("Switched to region: {}", region_name),
                 NotificationLevel::Success,
             );
+
+            // Update command context after region change
+            self.update_command_context();
         }
         Ok(())
     }
@@ -636,17 +666,69 @@ impl AppState {
         }
     }
 
-    fn update_command_context(&mut self) {
+    /// Update command context and refresh available commands based on current application state
+    pub fn update_command_context(&mut self) {
+        // Determine selected service from current page if not explicitly set
+        let selected_service = self.selected_service.or_else(|| match &self.current_page {
+            AppPage::ResourceList(service_type) => Some(*service_type),
+            AppPage::ResourceDetail(service_type, _) => Some(*service_type),
+            _ => None,
+        });
+
+        // Create updated context with current application state
         let context = CommandContext::new(
             self.current_page.clone(),
-            self.selected_service,
+            selected_service,
             self.selected_resource.clone(),
             self.available_profiles.clone(),
             self.available_regions.clone(),
             self.current_profile.clone(),
             self.current_region.clone(),
         );
-        self.command_palette.update_context(context);
+
+        // Update command palette context
+        self.command_palette.update_context(context.clone());
+
+        // Refresh commands with new context-aware filtering
+        let commands = CommandRegistry::get_context_aware_commands(&context);
+        self.command_palette.set_commands(commands);
+    }
+
+    /// Set the selected resource and update command context
+    pub fn set_selected_resource(&mut self, resource_id: Option<ResourceId>) {
+        self.selected_resource = resource_id;
+        self.update_command_context();
+    }
+
+    /// Set the selected service and update command context
+    pub fn set_selected_service(&mut self, service_type: Option<ServiceType>) {
+        self.selected_service = service_type;
+        self.update_command_context();
+    }
+
+    /// Navigate to a page and update command context
+    pub fn navigate_to_page(&mut self, page: AppPage) {
+        self.page_history.push(self.current_page.clone());
+        self.current_page = page.clone();
+
+        // Update selected service and resource based on new page
+        match &page {
+            AppPage::ResourceList(service_type) => {
+                self.selected_service = Some(*service_type);
+                self.selected_resource = None;
+            }
+            AppPage::ResourceDetail(service_type, resource_id) => {
+                self.selected_service = Some(*service_type);
+                self.selected_resource = Some(resource_id.clone());
+            }
+            AppPage::Dashboard | AppPage::Settings => {
+                self.selected_service = None;
+                self.selected_resource = None;
+            }
+        }
+
+        // Update command context after navigation
+        self.update_command_context();
     }
 
     async fn execute_command(&mut self, command: &crate::command::Command) -> Result<()> {
@@ -664,10 +746,19 @@ impl AppState {
                 self.current_page = AppPage::ResourceList(*service_type);
                 self.selected_resource_index = 0;
                 self.selected_service = Some(*service_type);
+                self.selected_resource = None; // Clear resource selection when navigating to service list
             }
             CommandAction::NavigateToPage(page) => {
                 self.page_history.push(self.current_page.clone());
                 self.current_page = page.clone();
+                // Clear service and resource selection when navigating to non-service pages
+                match page {
+                    AppPage::Dashboard | AppPage::Settings => {
+                        self.selected_service = None;
+                        self.selected_resource = None;
+                    }
+                    _ => {}
+                }
             }
             CommandAction::ExecuteServiceCommand(service_type, service_command) => {
                 self.execute_service_command(*service_type, service_command)
@@ -679,6 +770,8 @@ impl AppState {
             CommandAction::OpenSettings => {
                 self.page_history.push(self.current_page.clone());
                 self.current_page = AppPage::Settings;
+                self.selected_service = None;
+                self.selected_resource = None;
             }
             CommandAction::ToggleUI(ui_element) => match ui_element {
                 UIElement::ProfileSelector => {
