@@ -1,12 +1,12 @@
 use crate::aws::client::MultiRegionAwsClients;
 use crate::aws::profiles::ProfileManager;
 use crate::aws::types::{AwsProfile, AwsRegion, Resource, ResourceId, ServiceType};
+use crate::command::{CommandContext, CommandPalette, CommandRegistry};
 use crate::config::user_config::UserConfig;
 use crate::ui::pages::dashboard::favorites::FavoritesManager;
 use crate::ui::pages::dashboard::widgets::DashboardLayout;
-use crate::utils::error::{AppError, Result};
+use crate::utils::error::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::SystemTime;
 
@@ -99,6 +99,9 @@ pub struct AppState {
     pub quick_nav_suggestions: Vec<NavigationItem>,
     pub quick_nav_selected_index: usize,
 
+    // Command Palette
+    pub command_palette: CommandPalette,
+
     // User Configuration
     pub user_config: UserConfig,
 
@@ -111,7 +114,7 @@ impl AppState {
     pub async fn new() -> Result<Self> {
         let user_config = UserConfig::load().unwrap_or_default();
         let profile_manager = ProfileManager::new()?;
-        let available_profiles = profile_manager
+        let available_profiles: Vec<AwsProfile> = profile_manager
             .get_profiles()
             .into_iter()
             .cloned()
@@ -141,6 +144,20 @@ impl AppState {
 
         let favorites_manager = FavoritesManager::new()?;
         let dashboard_layout = DashboardLayout::new();
+
+        // Initialize command context
+        let command_context = CommandContext::new(
+            user_config.dashboard.default_page.clone(),
+            None,
+            None,
+            available_profiles.clone(),
+            available_regions.clone(),
+            current_profile.clone(),
+            current_region.clone(),
+        );
+
+        // Initialize command palette
+        let command_palette = CommandPalette::new(command_context);
 
         // Try to initialize AWS clients
         let aws_clients = match MultiRegionAwsClients::new(&current_profile, &current_region).await
@@ -179,6 +196,7 @@ impl AppState {
             quick_nav_input: String::new(),
             quick_nav_suggestions: vec![],
             quick_nav_selected_index: 0,
+            command_palette,
             user_config,
             error_message: None,
             notifications: vec![],
@@ -186,7 +204,12 @@ impl AppState {
     }
 
     pub async fn handle_input(&mut self, key: KeyEvent) -> Result<()> {
-        // Handle quick navigation input first
+        // Handle command palette input first
+        if self.command_palette.is_visible() {
+            return self.handle_command_palette_input(key).await;
+        }
+
+        // Handle quick navigation input
         if self.quick_nav_visible {
             return self.handle_quick_nav_input(key).await;
         }
@@ -198,6 +221,13 @@ impl AppState {
             }
             KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.toggle_quick_nav();
+                Ok(())
+            }
+            KeyCode::Char('P')
+                if key.modifiers.contains(KeyModifiers::CONTROL)
+                    && key.modifiers.contains(KeyModifiers::SHIFT) =>
+            {
+                self.toggle_command_palette();
                 Ok(())
             }
             KeyCode::Char('?') => {
@@ -242,7 +272,9 @@ impl AppState {
     }
 
     fn handle_escape(&mut self) {
-        if self.quick_nav_visible {
+        if self.command_palette.is_visible() {
+            self.command_palette.hide();
+        } else if self.quick_nav_visible {
             self.quick_nav_visible = false;
             self.quick_nav_input.clear();
             self.quick_nav_suggestions.clear();
@@ -545,5 +577,131 @@ impl AppState {
                 Ok(())
             }
         }
+    }
+
+    // Command Palette Methods
+    pub fn toggle_command_palette(&mut self) {
+        self.command_palette.toggle();
+        if self.command_palette.is_visible() {
+            self.update_command_context();
+            self.populate_command_palette();
+        }
+    }
+
+    fn populate_command_palette(&mut self) {
+        let registry = CommandRegistry::new();
+        let context = CommandContext::new(
+            self.current_page.clone(),
+            self.selected_service,
+            self.selected_resource.clone(),
+            self.available_profiles.clone(),
+            self.available_regions.clone(),
+            self.current_profile.clone(),
+            self.current_region.clone(),
+        );
+        let commands = registry.get_commands_for_context(&context);
+        self.command_palette.set_commands(commands);
+    }
+
+    async fn handle_command_palette_input(&mut self, key: KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Esc => {
+                self.command_palette.hide();
+                Ok(())
+            }
+            KeyCode::Enter => {
+                if let Some(command) = self.command_palette.get_selected_command() {
+                    let command = command.clone();
+                    self.command_palette.hide();
+                    self.execute_command(&command).await?;
+                }
+                Ok(())
+            }
+            KeyCode::Up => {
+                self.command_palette.select_previous();
+                Ok(())
+            }
+            KeyCode::Down => {
+                self.command_palette.select_next();
+                Ok(())
+            }
+            KeyCode::Char(c) => {
+                self.command_palette.add_char(c);
+                Ok(())
+            }
+            KeyCode::Backspace => {
+                self.command_palette.backspace();
+                Ok(())
+            }
+            _ => Ok(()),
+        }
+    }
+
+    fn update_command_context(&mut self) {
+        let context = CommandContext::new(
+            self.current_page.clone(),
+            self.selected_service,
+            self.selected_resource.clone(),
+            self.available_profiles.clone(),
+            self.available_regions.clone(),
+            self.current_profile.clone(),
+            self.current_region.clone(),
+        );
+        self.command_palette.update_context(context);
+    }
+
+    async fn execute_command(&mut self, command: &crate::command::Command) -> Result<()> {
+        use crate::command::{CommandAction, UIElement};
+
+        match &command.action {
+            CommandAction::SwitchProfile(profile_name) => {
+                self.switch_profile(profile_name).await?;
+            }
+            CommandAction::SwitchRegion(region_name) => {
+                self.switch_region(region_name).await?;
+            }
+            CommandAction::NavigateToService(service_type) => {
+                self.page_history.push(self.current_page.clone());
+                self.current_page = AppPage::ResourceList(*service_type);
+                self.selected_resource_index = 0;
+                self.selected_service = Some(*service_type);
+            }
+            CommandAction::NavigateToPage(page) => {
+                self.page_history.push(self.current_page.clone());
+                self.current_page = page.clone();
+            }
+            CommandAction::ExecuteServiceCommand(_service_type, _service_command) => {
+                // Service command execution will be implemented in later tasks
+                self.add_notification(
+                    "Service command execution not yet implemented".to_string(),
+                    NotificationLevel::Info,
+                );
+            }
+            CommandAction::ShowHelp => {
+                self.help_visible = true;
+            }
+            CommandAction::OpenSettings => {
+                self.page_history.push(self.current_page.clone());
+                self.current_page = AppPage::Settings;
+            }
+            CommandAction::ToggleUI(ui_element) => match ui_element {
+                UIElement::ProfileSelector => {
+                    self.profile_selector_visible = !self.profile_selector_visible;
+                }
+                UIElement::RegionSelector => {
+                    self.region_selector_visible = !self.region_selector_visible;
+                }
+                UIElement::Help => {
+                    self.help_visible = !self.help_visible;
+                }
+                UIElement::Settings => {
+                    self.settings_visible = !self.settings_visible;
+                }
+            },
+        }
+
+        // Update command context after executing command
+        self.update_command_context();
+        Ok(())
     }
 }
