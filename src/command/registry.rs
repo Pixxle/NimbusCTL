@@ -77,8 +77,8 @@ impl CommandRegistry {
         // Add context-aware region commands
         commands.extend(Self::create_region_commands_for_context(context));
 
-        // Add service commands
-        commands.extend(Self::create_service_commands());
+        // Add service commands with context-aware enabling/disabling
+        commands.extend(Self::create_service_commands_with_context(context));
 
         // Add general commands
         commands.extend(Self::create_general_commands());
@@ -95,6 +95,21 @@ impl CommandRegistry {
                 context.satisfies_all_requirements(&cmd.context_requirements)
             })
             .collect()
+    }
+
+    /// Create service-specific commands with context-aware enabling/disabling
+    fn create_service_commands_with_context(context: &CommandContext) -> Vec<Command> {
+        let mut commands = Vec::new();
+
+        // Create commands for each service type using dedicated builders
+        commands.extend(Self::create_ec2_commands_with_context(context));
+        commands.extend(Self::create_s3_commands_with_context(context));
+        commands.extend(Self::create_rds_commands_with_context(context));
+        commands.extend(Self::create_iam_commands_with_context(context));
+        commands.extend(Self::create_secrets_commands_with_context(context));
+        commands.extend(Self::create_eks_commands_with_context(context));
+
+        commands
     }
 
     /// Check if a command is applicable in the given context
@@ -318,30 +333,665 @@ impl CommandRegistry {
     fn create_service_commands() -> Vec<Command> {
         let mut commands = Vec::new();
 
-        for service_type in ServiceType::all() {
-            let service_commands = ServiceCommand::for_service(service_type);
+        // Create commands for each service type using dedicated builders
+        commands.extend(Self::create_ec2_commands());
+        commands.extend(Self::create_s3_commands());
+        commands.extend(Self::create_rds_commands());
+        commands.extend(Self::create_iam_commands());
+        commands.extend(Self::create_secrets_commands());
+        commands.extend(Self::create_eks_commands());
 
-            for service_command in service_commands {
-                let mut requirements = vec![ContextRequirement::ServiceSelected(service_type)];
+        commands
+    }
 
-                // Add resource selection requirement if needed
-                if service_command.requires_resource_selection() {
-                    requirements.push(ContextRequirement::ResourceOfTypeSelected(service_type));
-                }
+    /// Create EC2-specific commands
+    fn create_ec2_commands() -> Vec<Command> {
+        let service_type = ServiceType::EC2;
+        let mut commands = Vec::new();
 
-                commands.push(
-                    Command::new(
-                        format!("service.{:?}.{:?}", service_type, service_command).to_lowercase(),
-                        service_command.display_name().to_string(),
-                        service_command.description().to_string(),
-                        CommandCategory::Service(service_type),
-                        CommandAction::ExecuteServiceCommand(service_type, service_command.clone()),
-                        service_type.icon().to_string(),
-                    )
-                    .with_keywords(Self::get_service_command_keywords(&service_command))
-                    .with_context_requirements(requirements),
-                );
-            }
+        // List commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.ec2.listinstances".to_string(),
+                "List EC2 Instances".to_string(),
+                "List all EC2 instances in the current region".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::ListInstances),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "ec2".to_string(),
+                "list".to_string(),
+                "instances".to_string(),
+                "show".to_string(),
+                "view".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)]),
+        );
+
+        // Create commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.ec2.createinstance".to_string(),
+                "Create EC2 Instance".to_string(),
+                "Launch a new EC2 instance".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::CreateInstance),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "ec2".to_string(),
+                "create".to_string(),
+                "launch".to_string(),
+                "new".to_string(),
+                "instance".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)]),
+        );
+
+        // Resource-specific commands (require resource selection)
+        let resource_commands = vec![
+            (
+                ServiceCommand::StartInstance,
+                vec!["start".to_string(), "run".to_string(), "launch".to_string()],
+            ),
+            (
+                ServiceCommand::StopInstance,
+                vec![
+                    "stop".to_string(),
+                    "halt".to_string(),
+                    "shutdown".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::RebootInstance,
+                vec![
+                    "reboot".to_string(),
+                    "restart".to_string(),
+                    "reset".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::TerminateInstance,
+                vec![
+                    "terminate".to_string(),
+                    "destroy".to_string(),
+                    "delete".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DescribeInstance,
+                vec![
+                    "describe".to_string(),
+                    "details".to_string(),
+                    "info".to_string(),
+                ],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in resource_commands {
+            let mut keywords = vec!["ec2".to_string(), "instance".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.ec2.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![
+                    ContextRequirement::ServiceSelected(service_type),
+                    ContextRequirement::ResourceOfTypeSelected(service_type),
+                ]),
+            );
+        }
+
+        commands
+    }
+
+    /// Create S3-specific commands
+    fn create_s3_commands() -> Vec<Command> {
+        let service_type = ServiceType::S3;
+        let mut commands = Vec::new();
+
+        // List commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.s3.listbuckets".to_string(),
+                "List S3 Buckets".to_string(),
+                "List all S3 buckets in the current account".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::ListBuckets),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "s3".to_string(),
+                "list".to_string(),
+                "buckets".to_string(),
+                "show".to_string(),
+                "view".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)]),
+        );
+
+        // Create commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.s3.createbucket".to_string(),
+                "Create S3 Bucket".to_string(),
+                "Create a new S3 bucket".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::CreateBucket),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "s3".to_string(),
+                "create".to_string(),
+                "new".to_string(),
+                "bucket".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)]),
+        );
+
+        // Resource-specific commands (require resource selection)
+        let resource_commands = vec![
+            (
+                ServiceCommand::DeleteBucket,
+                vec![
+                    "delete".to_string(),
+                    "remove".to_string(),
+                    "destroy".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::GetBucketInfo,
+                vec![
+                    "info".to_string(),
+                    "details".to_string(),
+                    "describe".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::ListObjects,
+                vec![
+                    "list".to_string(),
+                    "objects".to_string(),
+                    "contents".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::UploadObject,
+                vec!["upload".to_string(), "put".to_string(), "add".to_string()],
+            ),
+            (
+                ServiceCommand::DownloadObject,
+                vec![
+                    "download".to_string(),
+                    "get".to_string(),
+                    "retrieve".to_string(),
+                ],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in resource_commands {
+            let mut keywords = vec!["s3".to_string(), "bucket".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.s3.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![
+                    ContextRequirement::ServiceSelected(service_type),
+                    ContextRequirement::ResourceOfTypeSelected(service_type),
+                ]),
+            );
+        }
+
+        commands
+    }
+
+    /// Create RDS-specific commands
+    fn create_rds_commands() -> Vec<Command> {
+        let service_type = ServiceType::RDS;
+        let mut commands = Vec::new();
+
+        // List commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.rds.listdatabases".to_string(),
+                "List RDS Databases".to_string(),
+                "List all RDS database instances".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::ListDatabases),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "rds".to_string(),
+                "list".to_string(),
+                "databases".to_string(),
+                "db".to_string(),
+                "show".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)]),
+        );
+
+        // Resource-specific commands (require resource selection)
+        let resource_commands = vec![
+            (
+                ServiceCommand::StartDatabase,
+                vec!["start".to_string(), "run".to_string(), "launch".to_string()],
+            ),
+            (
+                ServiceCommand::StopDatabase,
+                vec![
+                    "stop".to_string(),
+                    "halt".to_string(),
+                    "shutdown".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::RebootDatabase,
+                vec![
+                    "reboot".to_string(),
+                    "restart".to_string(),
+                    "reset".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DescribeDatabase,
+                vec![
+                    "describe".to_string(),
+                    "details".to_string(),
+                    "info".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::CreateSnapshot,
+                vec![
+                    "snapshot".to_string(),
+                    "backup".to_string(),
+                    "create".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::RestoreSnapshot,
+                vec![
+                    "restore".to_string(),
+                    "recover".to_string(),
+                    "snapshot".to_string(),
+                ],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in resource_commands {
+            let mut keywords = vec!["rds".to_string(), "database".to_string(), "db".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.rds.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![
+                    ContextRequirement::ServiceSelected(service_type),
+                    ContextRequirement::ResourceOfTypeSelected(service_type),
+                ]),
+            );
+        }
+
+        commands
+    }
+
+    /// Create IAM-specific commands
+    fn create_iam_commands() -> Vec<Command> {
+        let service_type = ServiceType::IAM;
+        let mut commands = Vec::new();
+
+        // List commands (no resource selection required)
+        let list_commands = vec![
+            (
+                ServiceCommand::ListUsers,
+                vec!["users".to_string(), "people".to_string()],
+            ),
+            (
+                ServiceCommand::ListRoles,
+                vec!["roles".to_string(), "permissions".to_string()],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in list_commands {
+            let mut keywords = vec!["iam".to_string(), "list".to_string(), "show".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.iam.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)]),
+            );
+        }
+
+        // Create commands (no resource selection required)
+        let create_commands = vec![
+            (
+                ServiceCommand::CreateUser,
+                vec!["user".to_string(), "person".to_string()],
+            ),
+            (
+                ServiceCommand::CreateRole,
+                vec!["role".to_string(), "permission".to_string()],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in create_commands {
+            let mut keywords = vec!["iam".to_string(), "create".to_string(), "new".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.iam.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)]),
+            );
+        }
+
+        // Resource-specific commands (require resource selection)
+        let resource_commands = vec![
+            (
+                ServiceCommand::DeleteUser,
+                vec![
+                    "delete".to_string(),
+                    "remove".to_string(),
+                    "user".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DeleteRole,
+                vec![
+                    "delete".to_string(),
+                    "remove".to_string(),
+                    "role".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::AttachPolicy,
+                vec![
+                    "attach".to_string(),
+                    "policy".to_string(),
+                    "permission".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DetachPolicy,
+                vec![
+                    "detach".to_string(),
+                    "policy".to_string(),
+                    "permission".to_string(),
+                ],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in resource_commands {
+            let mut keywords = vec!["iam".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.iam.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![
+                    ContextRequirement::ServiceSelected(service_type),
+                    ContextRequirement::ResourceOfTypeSelected(service_type),
+                ]),
+            );
+        }
+
+        commands
+    }
+
+    /// Create Secrets Manager-specific commands
+    fn create_secrets_commands() -> Vec<Command> {
+        let service_type = ServiceType::Secrets;
+        let mut commands = Vec::new();
+
+        // List commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.secrets.listsecrets".to_string(),
+                "List Secrets".to_string(),
+                "List all secrets in Secrets Manager".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::ListSecrets),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "secrets".to_string(),
+                "list".to_string(),
+                "show".to_string(),
+                "passwords".to_string(),
+                "keys".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)]),
+        );
+
+        // Create commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.secrets.createsecret".to_string(),
+                "Create Secret".to_string(),
+                "Create a new secret in Secrets Manager".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::CreateSecret),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "secrets".to_string(),
+                "create".to_string(),
+                "new".to_string(),
+                "password".to_string(),
+                "key".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)]),
+        );
+
+        // Resource-specific commands (require resource selection)
+        let resource_commands = vec![
+            (
+                ServiceCommand::UpdateSecret,
+                vec![
+                    "update".to_string(),
+                    "modify".to_string(),
+                    "change".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DeleteSecret,
+                vec![
+                    "delete".to_string(),
+                    "remove".to_string(),
+                    "destroy".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DescribeSecret,
+                vec![
+                    "describe".to_string(),
+                    "details".to_string(),
+                    "info".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::GetSecretValue,
+                vec![
+                    "get".to_string(),
+                    "retrieve".to_string(),
+                    "value".to_string(),
+                ],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in resource_commands {
+            let mut keywords = vec!["secrets".to_string(), "secret".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.secrets.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![
+                    ContextRequirement::ServiceSelected(service_type),
+                    ContextRequirement::ResourceOfTypeSelected(service_type),
+                ]),
+            );
+        }
+
+        commands
+    }
+
+    /// Create EKS-specific commands
+    fn create_eks_commands() -> Vec<Command> {
+        let service_type = ServiceType::EKS;
+        let mut commands = Vec::new();
+
+        // List commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.eks.listclusters".to_string(),
+                "List EKS Clusters".to_string(),
+                "List all EKS clusters in the current region".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::ListClusters),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "eks".to_string(),
+                "list".to_string(),
+                "clusters".to_string(),
+                "kubernetes".to_string(),
+                "k8s".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)]),
+        );
+
+        // Create commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.eks.createcluster".to_string(),
+                "Create EKS Cluster".to_string(),
+                "Create a new EKS cluster".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::CreateCluster),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "eks".to_string(),
+                "create".to_string(),
+                "new".to_string(),
+                "cluster".to_string(),
+                "kubernetes".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)]),
+        );
+
+        // Resource-specific commands (require resource selection)
+        let resource_commands = vec![
+            (
+                ServiceCommand::DeleteCluster,
+                vec![
+                    "delete".to_string(),
+                    "remove".to_string(),
+                    "destroy".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DescribeCluster,
+                vec![
+                    "describe".to_string(),
+                    "details".to_string(),
+                    "info".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::UpdateKubeconfig,
+                vec![
+                    "kubeconfig".to_string(),
+                    "kubectl".to_string(),
+                    "config".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::ListNodeGroups,
+                vec![
+                    "nodes".to_string(),
+                    "nodegroups".to_string(),
+                    "workers".to_string(),
+                ],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in resource_commands {
+            let mut keywords = vec![
+                "eks".to_string(),
+                "cluster".to_string(),
+                "kubernetes".to_string(),
+            ];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.eks.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![
+                    ContextRequirement::ServiceSelected(service_type),
+                    ContextRequirement::ResourceOfTypeSelected(service_type),
+                ]),
+            );
         }
 
         commands
@@ -503,6 +1153,688 @@ impl CommandRegistry {
         }
 
         keywords
+    }
+
+    /// Create EC2-specific commands with context awareness
+    fn create_ec2_commands_with_context(context: &CommandContext) -> Vec<Command> {
+        let service_type = ServiceType::EC2;
+        let mut commands = Vec::new();
+        let is_service_selected = context.selected_service == Some(service_type);
+        let has_resource_selected = context.selected_resource.is_some() && is_service_selected;
+
+        // List commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.ec2.listinstances".to_string(),
+                "List EC2 Instances".to_string(),
+                "List all EC2 instances in the current region".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::ListInstances),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "ec2".to_string(),
+                "list".to_string(),
+                "instances".to_string(),
+                "show".to_string(),
+                "view".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)])
+            .with_enabled(is_service_selected),
+        );
+
+        // Create commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.ec2.createinstance".to_string(),
+                "Create EC2 Instance".to_string(),
+                "Launch a new EC2 instance".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::CreateInstance),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "ec2".to_string(),
+                "create".to_string(),
+                "launch".to_string(),
+                "new".to_string(),
+                "instance".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)])
+            .with_enabled(is_service_selected),
+        );
+
+        // Resource-specific commands (require resource selection)
+        let resource_commands = vec![
+            (
+                ServiceCommand::StartInstance,
+                vec!["start".to_string(), "run".to_string(), "launch".to_string()],
+            ),
+            (
+                ServiceCommand::StopInstance,
+                vec![
+                    "stop".to_string(),
+                    "halt".to_string(),
+                    "shutdown".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::RebootInstance,
+                vec![
+                    "reboot".to_string(),
+                    "restart".to_string(),
+                    "reset".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::TerminateInstance,
+                vec![
+                    "terminate".to_string(),
+                    "destroy".to_string(),
+                    "delete".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DescribeInstance,
+                vec![
+                    "describe".to_string(),
+                    "details".to_string(),
+                    "info".to_string(),
+                ],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in resource_commands {
+            let mut keywords = vec!["ec2".to_string(), "instance".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.ec2.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![
+                    ContextRequirement::ServiceSelected(service_type),
+                    ContextRequirement::ResourceOfTypeSelected(service_type),
+                ])
+                .with_enabled(has_resource_selected),
+            );
+        }
+
+        commands
+    }
+
+    /// Create S3-specific commands with context awareness
+    fn create_s3_commands_with_context(context: &CommandContext) -> Vec<Command> {
+        let service_type = ServiceType::S3;
+        let mut commands = Vec::new();
+        let is_service_selected = context.selected_service == Some(service_type);
+        let has_resource_selected = context.selected_resource.is_some() && is_service_selected;
+
+        // List commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.s3.listbuckets".to_string(),
+                "List S3 Buckets".to_string(),
+                "List all S3 buckets in the current account".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::ListBuckets),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "s3".to_string(),
+                "list".to_string(),
+                "buckets".to_string(),
+                "show".to_string(),
+                "view".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)])
+            .with_enabled(is_service_selected),
+        );
+
+        // Create commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.s3.createbucket".to_string(),
+                "Create S3 Bucket".to_string(),
+                "Create a new S3 bucket".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::CreateBucket),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "s3".to_string(),
+                "create".to_string(),
+                "new".to_string(),
+                "bucket".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)])
+            .with_enabled(is_service_selected),
+        );
+
+        // Resource-specific commands (require resource selection)
+        let resource_commands = vec![
+            (
+                ServiceCommand::DeleteBucket,
+                vec![
+                    "delete".to_string(),
+                    "remove".to_string(),
+                    "destroy".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::GetBucketInfo,
+                vec![
+                    "info".to_string(),
+                    "details".to_string(),
+                    "describe".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::ListObjects,
+                vec![
+                    "list".to_string(),
+                    "objects".to_string(),
+                    "contents".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::UploadObject,
+                vec!["upload".to_string(), "put".to_string(), "add".to_string()],
+            ),
+            (
+                ServiceCommand::DownloadObject,
+                vec![
+                    "download".to_string(),
+                    "get".to_string(),
+                    "retrieve".to_string(),
+                ],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in resource_commands {
+            let mut keywords = vec!["s3".to_string(), "bucket".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.s3.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![
+                    ContextRequirement::ServiceSelected(service_type),
+                    ContextRequirement::ResourceOfTypeSelected(service_type),
+                ])
+                .with_enabled(has_resource_selected),
+            );
+        }
+
+        commands
+    }
+
+    /// Create RDS-specific commands with context awareness
+    fn create_rds_commands_with_context(context: &CommandContext) -> Vec<Command> {
+        let service_type = ServiceType::RDS;
+        let mut commands = Vec::new();
+        let is_service_selected = context.selected_service == Some(service_type);
+        let has_resource_selected = context.selected_resource.is_some() && is_service_selected;
+
+        // List commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.rds.listdatabases".to_string(),
+                "List RDS Databases".to_string(),
+                "List all RDS database instances".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::ListDatabases),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "rds".to_string(),
+                "list".to_string(),
+                "databases".to_string(),
+                "db".to_string(),
+                "show".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)])
+            .with_enabled(is_service_selected),
+        );
+
+        // Resource-specific commands (require resource selection)
+        let resource_commands = vec![
+            (
+                ServiceCommand::StartDatabase,
+                vec!["start".to_string(), "run".to_string(), "launch".to_string()],
+            ),
+            (
+                ServiceCommand::StopDatabase,
+                vec![
+                    "stop".to_string(),
+                    "halt".to_string(),
+                    "shutdown".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::RebootDatabase,
+                vec![
+                    "reboot".to_string(),
+                    "restart".to_string(),
+                    "reset".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DescribeDatabase,
+                vec![
+                    "describe".to_string(),
+                    "details".to_string(),
+                    "info".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::CreateSnapshot,
+                vec![
+                    "snapshot".to_string(),
+                    "backup".to_string(),
+                    "create".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::RestoreSnapshot,
+                vec![
+                    "restore".to_string(),
+                    "recover".to_string(),
+                    "snapshot".to_string(),
+                ],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in resource_commands {
+            let mut keywords = vec!["rds".to_string(), "database".to_string(), "db".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.rds.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![
+                    ContextRequirement::ServiceSelected(service_type),
+                    ContextRequirement::ResourceOfTypeSelected(service_type),
+                ])
+                .with_enabled(has_resource_selected),
+            );
+        }
+
+        commands
+    }
+
+    /// Create IAM-specific commands with context awareness
+    fn create_iam_commands_with_context(context: &CommandContext) -> Vec<Command> {
+        let service_type = ServiceType::IAM;
+        let mut commands = Vec::new();
+        let is_service_selected = context.selected_service == Some(service_type);
+        let has_resource_selected = context.selected_resource.is_some() && is_service_selected;
+
+        // List commands (no resource selection required)
+        let list_commands = vec![
+            (
+                ServiceCommand::ListUsers,
+                vec!["users".to_string(), "people".to_string()],
+            ),
+            (
+                ServiceCommand::ListRoles,
+                vec!["roles".to_string(), "permissions".to_string()],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in list_commands {
+            let mut keywords = vec!["iam".to_string(), "list".to_string(), "show".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.iam.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)])
+                .with_enabled(is_service_selected),
+            );
+        }
+
+        // Create commands (no resource selection required)
+        let create_commands = vec![
+            (
+                ServiceCommand::CreateUser,
+                vec!["user".to_string(), "person".to_string()],
+            ),
+            (
+                ServiceCommand::CreateRole,
+                vec!["role".to_string(), "permission".to_string()],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in create_commands {
+            let mut keywords = vec!["iam".to_string(), "create".to_string(), "new".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.iam.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)])
+                .with_enabled(is_service_selected),
+            );
+        }
+
+        // Resource-specific commands (require resource selection)
+        let resource_commands = vec![
+            (
+                ServiceCommand::DeleteUser,
+                vec![
+                    "delete".to_string(),
+                    "remove".to_string(),
+                    "user".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DeleteRole,
+                vec![
+                    "delete".to_string(),
+                    "remove".to_string(),
+                    "role".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::AttachPolicy,
+                vec![
+                    "attach".to_string(),
+                    "policy".to_string(),
+                    "permission".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DetachPolicy,
+                vec![
+                    "detach".to_string(),
+                    "policy".to_string(),
+                    "permission".to_string(),
+                ],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in resource_commands {
+            let mut keywords = vec!["iam".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.iam.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![
+                    ContextRequirement::ServiceSelected(service_type),
+                    ContextRequirement::ResourceOfTypeSelected(service_type),
+                ])
+                .with_enabled(has_resource_selected),
+            );
+        }
+
+        commands
+    }
+
+    /// Create Secrets Manager-specific commands with context awareness
+    fn create_secrets_commands_with_context(context: &CommandContext) -> Vec<Command> {
+        let service_type = ServiceType::Secrets;
+        let mut commands = Vec::new();
+        let is_service_selected = context.selected_service == Some(service_type);
+        let has_resource_selected = context.selected_resource.is_some() && is_service_selected;
+
+        // List commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.secrets.listsecrets".to_string(),
+                "List Secrets".to_string(),
+                "List all secrets in Secrets Manager".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::ListSecrets),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "secrets".to_string(),
+                "list".to_string(),
+                "show".to_string(),
+                "passwords".to_string(),
+                "keys".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)])
+            .with_enabled(is_service_selected),
+        );
+
+        // Create commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.secrets.createsecret".to_string(),
+                "Create Secret".to_string(),
+                "Create a new secret in Secrets Manager".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::CreateSecret),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "secrets".to_string(),
+                "create".to_string(),
+                "new".to_string(),
+                "password".to_string(),
+                "key".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)])
+            .with_enabled(is_service_selected),
+        );
+
+        // Resource-specific commands (require resource selection)
+        let resource_commands = vec![
+            (
+                ServiceCommand::UpdateSecret,
+                vec![
+                    "update".to_string(),
+                    "modify".to_string(),
+                    "change".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DeleteSecret,
+                vec![
+                    "delete".to_string(),
+                    "remove".to_string(),
+                    "destroy".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DescribeSecret,
+                vec![
+                    "describe".to_string(),
+                    "details".to_string(),
+                    "info".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::GetSecretValue,
+                vec![
+                    "get".to_string(),
+                    "retrieve".to_string(),
+                    "value".to_string(),
+                ],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in resource_commands {
+            let mut keywords = vec!["secrets".to_string(), "secret".to_string()];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.secrets.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![
+                    ContextRequirement::ServiceSelected(service_type),
+                    ContextRequirement::ResourceOfTypeSelected(service_type),
+                ])
+                .with_enabled(has_resource_selected),
+            );
+        }
+
+        commands
+    }
+
+    /// Create EKS-specific commands with context awareness
+    fn create_eks_commands_with_context(context: &CommandContext) -> Vec<Command> {
+        let service_type = ServiceType::EKS;
+        let mut commands = Vec::new();
+        let is_service_selected = context.selected_service == Some(service_type);
+        let has_resource_selected = context.selected_resource.is_some() && is_service_selected;
+
+        // List commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.eks.listclusters".to_string(),
+                "List EKS Clusters".to_string(),
+                "List all EKS clusters in the current region".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::ListClusters),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "eks".to_string(),
+                "list".to_string(),
+                "clusters".to_string(),
+                "kubernetes".to_string(),
+                "k8s".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)])
+            .with_enabled(is_service_selected),
+        );
+
+        // Create commands (no resource selection required)
+        commands.push(
+            Command::new(
+                "service.eks.createcluster".to_string(),
+                "Create EKS Cluster".to_string(),
+                "Create a new EKS cluster".to_string(),
+                CommandCategory::Service(service_type),
+                CommandAction::ExecuteServiceCommand(service_type, ServiceCommand::CreateCluster),
+                service_type.icon().to_string(),
+            )
+            .with_keywords(vec![
+                "eks".to_string(),
+                "create".to_string(),
+                "new".to_string(),
+                "cluster".to_string(),
+                "kubernetes".to_string(),
+            ])
+            .with_context_requirements(vec![ContextRequirement::ServiceSelected(service_type)])
+            .with_enabled(is_service_selected),
+        );
+
+        // Resource-specific commands (require resource selection)
+        let resource_commands = vec![
+            (
+                ServiceCommand::DeleteCluster,
+                vec![
+                    "delete".to_string(),
+                    "remove".to_string(),
+                    "destroy".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::DescribeCluster,
+                vec![
+                    "describe".to_string(),
+                    "details".to_string(),
+                    "info".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::UpdateKubeconfig,
+                vec![
+                    "kubeconfig".to_string(),
+                    "kubectl".to_string(),
+                    "config".to_string(),
+                ],
+            ),
+            (
+                ServiceCommand::ListNodeGroups,
+                vec![
+                    "nodes".to_string(),
+                    "nodegroups".to_string(),
+                    "workers".to_string(),
+                ],
+            ),
+        ];
+
+        for (service_command, extra_keywords) in resource_commands {
+            let mut keywords = vec![
+                "eks".to_string(),
+                "cluster".to_string(),
+                "kubernetes".to_string(),
+            ];
+            keywords.extend(extra_keywords);
+
+            commands.push(
+                Command::new(
+                    format!("service.eks.{:?}", service_command).to_lowercase(),
+                    service_command.display_name().to_string(),
+                    service_command.description().to_string(),
+                    CommandCategory::Service(service_type),
+                    CommandAction::ExecuteServiceCommand(service_type, service_command),
+                    service_type.icon().to_string(),
+                )
+                .with_keywords(keywords)
+                .with_context_requirements(vec![
+                    ContextRequirement::ServiceSelected(service_type),
+                    ContextRequirement::ResourceOfTypeSelected(service_type),
+                ])
+                .with_enabled(has_resource_selected),
+            );
+        }
+
+        commands
     }
 }
 
