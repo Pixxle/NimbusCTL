@@ -223,10 +223,7 @@ impl AppState {
                 self.toggle_quick_nav();
                 Ok(())
             }
-            KeyCode::Char('P')
-                if key.modifiers.contains(KeyModifiers::CONTROL)
-                    && key.modifiers.contains(KeyModifiers::SHIFT) =>
-            {
+            KeyCode::Char('o') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 self.toggle_command_palette();
                 Ok(())
             }

@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::time::{Duration, SystemTime};
 
 pub type ResourceId = String;
 
@@ -80,6 +81,35 @@ pub struct AwsProfile {
     pub session_token: Option<String>,
     pub role_arn: Option<String>,
     pub source_profile: Option<String>,
+    pub mfa_serial: Option<String>,
+    pub external_id: Option<String>,
+    pub credential_source: CredentialSource,
+}
+
+#[derive(Debug, Clone)]
+pub struct ProfileMetadata {
+    pub account_id: Option<String>,
+    pub user_arn: Option<String>,
+    pub role_arn: Option<String>,
+    pub mfa_required: bool,
+    pub session_duration: Option<Duration>,
+    pub last_validated: Option<SystemTime>,
+    pub validation_status: ValidationStatus,
+}
+
+#[derive(Debug, Clone)]
+pub enum ValidationStatus {
+    Valid,
+    Invalid(String),
+    Expired,
+    MfaRequired,
+    Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum CredentialSource {
+    ConfigFile(String), // profile name
+    Environment,
 }
 
 #[derive(Debug, Clone)]
