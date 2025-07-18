@@ -10,6 +10,7 @@ use tokio::time::Duration;
 
 mod app;
 mod aws;
+mod command;
 mod config;
 mod ui;
 mod utils;

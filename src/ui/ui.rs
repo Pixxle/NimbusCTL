@@ -1,5 +1,5 @@
 use crate::app::state::{AppPage, AppState};
-use crate::ui::components::{help_panel, quick_nav};
+use crate::ui::components::{command_palette, help_panel, quick_nav};
 use crate::ui::layout::create_main_layout;
 use crate::ui::pages::{dashboard, resource_detail, resource_list, settings};
 use ratatui::Frame;
@@ -38,5 +38,10 @@ pub fn draw_ui(f: &mut Frame, app_state: &mut AppState) {
     // Draw quick navigation overlay if visible
     if app_state.quick_nav_visible {
         quick_nav::draw_quick_nav(f, app_state);
+    }
+
+    // Draw command palette overlay if visible
+    if app_state.command_palette.is_visible() {
+        command_palette::draw_command_palette(f, app_state);
     }
 }

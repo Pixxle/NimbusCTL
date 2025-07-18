@@ -1,3 +1,4 @@
+pub mod command_palette;
 pub mod header;
 pub mod help_panel;
 pub mod notification;

@@ -239,3 +239,6 @@ callgrind.out.*
 .devcontainer/
 .docker/
 docker-compose.override.yml
+
+
+.kiro/**
